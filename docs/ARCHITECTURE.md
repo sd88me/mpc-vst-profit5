@@ -47,5 +47,5 @@ and stays bounded. Bass at k = 3 is 0.25 (= 1/(1+k)). Drift std is 0.81.
 ## Next
 1. Pot/switch index map from a later board 3 schematic, or by tracing the code.
 2. Fits for the envelope time law, cutoff scaling and LFO range, from a recording of a real unit or the user's measurements.
-3. Engine (`src/engine.c`) from Profit-08's voice loop: 5 voices, one layer, no sequencer.
+3. ~~Engine~~: started 2026-10-20, see `docs/ENGINE.md` (Rev 2 / Rev 4 switch, all 38 programs render clean offline).
 4. Skin (3 tabs), host test, bench, release.
