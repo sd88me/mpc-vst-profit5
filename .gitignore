@@ -1,0 +1,7 @@
+*.bin
+*.rom
+*.pdf
+*.syx
+*.wav
+build/
+Preset_Banks/
