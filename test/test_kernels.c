@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <assert.h>
 #ifndef MA_MASTER_HDR
-#define MA_MASTER_HDR "../../mpc-vst-morpho-PE/analog/mpc_analog.h"
+#define MA_MASTER_HDR "../analog/mpc_analog.h"
 #endif
-#include MA_MASTER_HDR  /* the morpho-PE master copy; override with -DMA_MASTER_HDR=... */
+#include MA_MASTER_HDR  /* synced copy of morpho-PE's master (analog/sync.sh) */
 #include "../analog/mpc_analog_p5.h"
 int main(void) {
     const float fs = 48000;
