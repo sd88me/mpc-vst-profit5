@@ -1,7 +1,7 @@
 /* x86 CPU estimate: five voices held, 10 s of audio per setting; prints the real-time factor. */
 #include <stdio.h>
 #include <time.h>
-#include "../src/engine.h"
+#include "../src/p5_engine.h"
 static float buf[480];
 int main(void) {
     static p5_engine_t e;

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
-#include "../src/engine.h"
+#include "../src/p5_engine.h"
 
 #define FS 48000
 static float buf[FS * 4];

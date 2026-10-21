@@ -25,6 +25,9 @@ enum {
     P5P_VOLUME,
     P5P_NVOICES,    /* 1..5 voices (0..1 -> 1..5) */
     P5P_QUALITY,    /* < 0.5: Eco 1x; >= 0.5: High 2x oversampled */
+    /* appended 2026-10-21 (the Rev 4 panel) */
+    P5P_LFO_INIT,   /* LFO INITIAL AMOUNT: wheel-mod depth with the wheel down (the wheel adds to it) */
+    P5P_KBD_HALF,   /* filter KEYBOARD HALF (Rev 4's HALF/FULL): half tracking when on */
     P5P_COUNT
 };
 

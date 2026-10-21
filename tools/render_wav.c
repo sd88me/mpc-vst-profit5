@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "../src/engine.h"
+#include "../src/p5_engine.h"
 
 #define FS 48000
 static float buf[FS * 8];

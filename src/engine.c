@@ -6,7 +6,7 @@
  * cutoff. Every pot runs through the CV path: 121 steps in Rev 2 (the 7-bit DAC in 1/12 V steps), smooth in Rev 4, then an S&H RC. */
 #include <math.h>
 #include <string.h>
-#include "engine.h"
+#include "p5_engine.h"
 #include "presets_factory.h"
 
 #define C0_HZ 16.3516f      /* frequency 0 puts the lowest key on C0 (manual 4.1-4.3) */
@@ -221,7 +221,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     /* Glide is a CA3080 OTA charging 0.1 uF (board 3 p3): a constant slew rate, its current set exponentially by the glide CV
      * (AD820 pair), with the OTA's tanh softening the last half semitone. Rate 3000 .. 10 semitones/s over the pot (range assumed). */
     const float glide_rate = 3000.0f * powf(10.0f, -2.48f * glide) * inv, glide_on = glide >= 0.03f;
-    const int fkbd = sw(e, P5P_F_KBD);
+    const int fkbd = sw(e, P5P_F_KBD), kbd_half = sw(e, P5P_KBD_HALF);
     const float vel_f = touch ? e->p[P5P_VEL_FILT] : 0, vel_a = touch ? e->p[P5P_VEL_AMP] : 0;
     const float at_f = touch ? e->p[P5P_AT_FILT] : 0, at_l = touch ? e->p[P5P_AT_LFO] : 0;
     const float master = 0.5f * e->p[P5P_VOLUME] * e->p[P5P_VOLUME] * 2.2f;
@@ -243,7 +243,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
             float white = rnd(&e->rng);
             e->pink += e->pink_c * (white - e->pink);                     /* one pole at 159 Hz: 100k, 0.01 uF (board 3 p3) */
             float wm_src = lfo * (1 - wm_mix) + e->pink * 6 * wm_mix;   /* 2020 crossfade on SOURCE MIX, then the wheel pot */
-            float wm = wm_src * clampf(e->wheel + at_l * maxp, 0, 1);
+            float wm = wm_src * clampf(e->wheel + e->p[P5P_LFO_INIT] + at_l * maxp, 0, 1);
             int ctl = (e->ctl++ & CTL_MASK) == 0;
             const float k = 4.4f * c[1];
             float sum = 0;
@@ -294,7 +294,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 /* mixer (2020 VCAs) */
                 float in = 0.45f * (c[3] * oa + c[4] * ob + c[5] * white * 0.8f);
                 /* cutoff: 450 Hz at pot 6 on the lowest key with KBD on (manual 3.4), 10.5 octaves over the pot (assumption) */
-                float oct = 10.5f * (c[0] - 0.6f) + (fkbd ? x->semis * (1.0f / 12) : 0) + 8 * c[2] * fe
+                float oct = 10.5f * (c[0] - 0.6f) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + 8 * c[2] * fe
                           + (pm_fi ? 6 * pm_src + 5 * pm_b : 0) + (wm_fi ? 3 * wm : 0) + at_f * 3 * x->press
                           + vint * (r->drift_cut_oct * x->dr[2] + r->tol_cut_oct * x->tol[5]);
                 float hz = clampf(450.0f * fexp2(oct), 8, 0.4f * fsi);
