@@ -57,7 +57,7 @@ typedef struct {
     float hb[MA_HB_B_M], hb_a[MA_HB_A_M];
     ma_hb_t dec;
     int ctl;                            /* control-rate counter */
-    float pink;
+    float pink, pink_c;
     uint32_t diag_nan;
 } p5_engine_t;
 

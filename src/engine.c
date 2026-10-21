@@ -64,6 +64,7 @@ static void env_coefs(p5_engine_t *e) {
 static void set_rate(p5_engine_t *e) {
     e->os = sw(e, P5P_QUALITY) ? 2 : 1;
     e->fsi = e->fs * e->os;
+    e->pink_c = 1 - expf(-6.2831853f * 159.0f / e->fsi);
     for (int i = 0; i < 10; i++) ma_cv_init(&e->cv[i], 0.002f, e->fsi);    /* S&H + CV filter RC, about 2 ms */
     for (int v = 0; v < P5_VOICES; v++)
         for (int d = 0; d < 3; d++) ma_drift_init(&e->v[v].drift[d], 7 * v + d + 1, e->fsi / (CTL_MASK + 1));
@@ -201,7 +202,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     const float vint = e->p[P5P_VINTAGE];
     const float tune = (e->p[P5P_TUNE] - 0.5f) * 2 + e->bend * 2;           /* +-1 semitone tune, +-2 bend (assumption) */
     const float a_semis = semis_pot(e, P5P_A_FREQ), b_semis = semis_pot(e, P5P_B_FREQ);
-    const float b_fine = pot(e, P5P_B_FINE);                                  /* 0..+1 semitone */
+    const float b_fine = 6 * pot(e, P5P_B_FINE);                              /* 0..+6 semitones: 2M into the 100k osc B summer = 0.5 V (board 3 p3) */
     const int a_saw = sw(e, P5P_A_SAW), a_pul = sw(e, P5P_A_PULSE), sync = sw(e, P5P_A_SYNC);
     const int b_saw = sw(e, P5P_B_SAW), b_tri = sw(e, P5P_B_TRI), b_pul = sw(e, P5P_B_PULSE), b_lo = sw(e, P5P_B_LO), b_kbd = sw(e, P5P_B_KBD);
     const int pm_fa = sw(e, P5P_PM_DEST_FA), pm_pw = sw(e, P5P_PM_DEST_PWA), pm_fi = sw(e, P5P_PM_DEST_FILT);
@@ -210,7 +211,9 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     const float lfo_hz = 0.1f * fexp2(8 * pot(e, P5P_LFO_FREQ));             /* 0.1 .. 25.6 Hz (assumption) */
     const float wm_mix = pot(e, P5P_WM_MIX);
     const float glide = pot(e, P5P_GLIDE);
-    const float glide_c = glide < 0.03f ? 1.0f : 1 - expf(-1 / (0.002f * powf(10.0f, 3 * glide) * fsi));  /* RC, tau 2 ms .. 2 s */
+    /* Glide is a CA3080 OTA charging 0.1 uF (board 3 p3): a constant slew rate, its current set exponentially by the glide CV
+     * (AD820 pair), with the OTA's tanh softening the last half semitone. Rate 3000 .. 10 semitones/s over the pot (range assumed). */
+    const float glide_rate = 3000.0f * powf(10.0f, -2.48f * glide) * inv, glide_on = glide >= 0.03f;
     const int fkbd = sw(e, P5P_F_KBD);
     const float vel_f = touch ? e->p[P5P_VEL_FILT] : 0, vel_a = touch ? e->p[P5P_VEL_AMP] : 0;
     const float at_f = touch ? e->p[P5P_AT_FILT] : 0, at_l = touch ? e->p[P5P_AT_LFO] : 0;
@@ -231,8 +234,8 @@ void p5_render(p5_engine_t *e, float *out, int n) {
             float lfo = (l_saw ? 2 * e->lfo_ph - 1 : 0) + (l_tri ? (e->lfo_ph < 0.5f ? 4 * e->lfo_ph - 1 : 3 - 4 * e->lfo_ph) : 0)
                       + (l_sqr ? (e->lfo_ph < 0.5f ? 1.0f : -1.0f) : 0);
             float white = rnd(&e->rng);
-            e->pink += 0.02f * (white - e->pink);
-            float wm_src = lfo * (1 - wm_mix) + e->pink * 4 * wm_mix;
+            e->pink += e->pink_c * (white - e->pink);                     /* one pole at 159 Hz: 100k, 0.01 uF (board 3 p3) */
+            float wm_src = lfo * (1 - wm_mix) + e->pink * 6 * wm_mix;   /* 2020 crossfade on SOURCE MIX, then the wheel pot */
             float wm = wm_src * clampf(e->wheel + at_l * maxp, 0, 1);
             int ctl = (e->ctl++ & CTL_MASK) == 0;
             const float k = 4.4f * c[1];
@@ -241,7 +244,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 p5_voice_t *x = &e->v[v];
                 if (x->aenv.st == MA_ENV_IDLE && !x->gate) continue;
                 if (ctl) for (int d = 0; d < 3; d++) x->dr[d] = ma_drift_tick(&x->drift[d]);
-                x->semis += (x->semis_target - x->semis) * glide_c;
+                if (glide_on) x->semis += glide_rate * ma_tanh((x->semis_target - x->semis) * 2); else x->semis = x->semis_target;
                 float fe = ma_env_tick(&x->fenv, &e->fk) * (1 - vel_f * (1 - x->vel));
                 float ae = ma_env_tick(&x->aenv, &e->ak) * (1 - vel_a * (1 - x->vel));
                 /* pitch, semitones above C0 */
@@ -250,7 +253,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 float pm_src = c[8] * fe;                                           /* filter-env part of poly-mod */
                 float pm_b = c[9] * x->out_b;                                       /* osc B part (audio rate) */
                 float sa = x->semis + a_semis + tune + cents_a * 0.01f + (pm_fa ? 48 * pm_src + 24 * pm_b : 0) + (wm_fa ? 4 * wm : 0);
-                float sb = (b_kbd ? x->semis : 0) + b_semis + 0.01f * 100 * b_fine + tune + cents_b * 0.01f + (wm_fb ? 4 * wm : 0);
+                float sb = (b_kbd ? x->semis : 0) + b_semis + b_fine + tune + cents_b * 0.01f + (wm_fb ? 4 * wm : 0);
                 float hz_a = vco_hz(r, C0_HZ * fexp2(sa * (1.0f / 12)), x->tol[2]);
                 float hz_b = C0_HZ * fexp2(sb * (1.0f / 12)) * (b_lo ? (1.0f / 128) : 1.0f);
                 if (!b_lo) hz_b = vco_hz(r, hz_b, x->tol[3]);
@@ -298,7 +301,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
             acc[o] = sum;
         }
         float y = e->os == 2 ? ma_hb_dec(&e->dec, e->hb, MA_HB_B_M, acc[0], acc[1]) : acc[0];
-        out[i] = 1.25f * ma_tanh(y * master * 0.8f);
+        out[i] = ma_tanh(y * master);                        /* soft limiter, ceiling 1.0 */
     }
 }
 

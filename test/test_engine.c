@@ -124,7 +124,22 @@ int main(void) {
                 if (pk < 0.02f) { quiet++; if (q) printf("  quiet: rev %d %s (peak %.4f)\n", r ? 4 : 2, p5_factory_name(i), pk); }
             }
     printf("%d program renders, max peak %.3f, %d quiet (< 0.02)\n", 4 * p5_factory_count(), maxpk, quiet);
-    assert(maxpk <= 1.25f);
+    assert(maxpk <= 1.0f);
+    /* 9. glide is a constant slew rate (CA3080 OTA, board 3): two octaves take about twice as long as one */
+    {
+        int t[2];
+        for (int j = 0; j < 2; j++) {
+            p5_init(&E, FS); plain(&E, 0, 0); p5_set(&E, P5P_GLIDE, 0.8f); p5_set(&E, P5P_NVOICES, 0);
+            p5_note_on(&E, 48, 1); p5_render(&E, buf, 64);
+            p5_note_on(&E, j ? 72 : 60, 1);
+            int n = 0;
+            while (fabsf(E.v[E.rr].semis - E.v[E.rr].semis_target) > 0.05f && n < FS * 4) { p5_render(&E, buf, 64); n += 64; }
+            t[j] = n;
+        }
+        double ratio = (double)t[1] / t[0];
+        printf("glide: 12 semitones %.0f ms, 24 semitones %.0f ms (ratio %.2f)\n", 1e3 * t[0] / FS, 1e3 * t[1] / FS, ratio);
+        assert(ratio > 1.8 && ratio < 2.2);
+    }
     puts("ok");
     return 0;
 }
