@@ -47,6 +47,15 @@ Rev 1 service manual (serials 0001-0182, board 4 dated 6/19/78). These are layou
 - **Poly-Mod:** an SSM 2020 VCA each for the osc B amount and the filter env amount, mixed by a 741 and switched to Freq A, PW A and Filter.
 - **Final VCA:** SSM 2020 driven by the amp envelope, then the voice volume trim (100k).
 
+## Front panel (boards 1 and 2, Rev 1)
+- **Board 1 (right panel):** 11 x 100k linear pots, each a divider from the reference to ground. Their wipers go to these connector pins: cutoff 8, resonance 7, env amount 4,
+  filter A/D/S/R 20/17/13/14, amp A/D/S/R 9/10/5/6. The program LEDs 1-8 are on 30/2/24/28/27/25/23/15, and the program switches go through a diode matrix (11 x 1N914).
+- **Board 2 (left panel):** a switch-driver / LED-sink matrix of 4042 latches (CS7, CS8) into current sinks. Its first three columns are:
+  - osc A pulse, osc A saw, P-Mod filter, P-Mod PW A, P-Mod freq A, LFO saw
+  - W-Mod filter, W-Mod PW B, LFO square, LFO triangle, W-Mod PW A, W-Mod freq B
+  - osc B saw, osc B triangle, osc B pulse, sync, W-Mod freq A, LO FREQ
+- This is the Rev 1 board. v7.0 uses a different port map, so these are not taken as the firmware's bit order.
+
 ## Still open
 - Pot-to-index map for indices 0-23 (only 0x12/0x13 = osc A/B frequency are certain), and the switch latch bits. The Rev 1 board 3 interface
   (page 2) confirms a 7-bit DAC (4042 latches) and a 7-bit ADC with a "tune interrupt latch" on NMI. But its port decoding (CS0-CS10 from a 74LS138 and a
