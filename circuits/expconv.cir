@@ -1,0 +1,23 @@
+* SSM 2030 exponential converter (datasheet "Control Circuit"): the CV through 54.9k into 1k (Vb = Ve * 1k / 55.9k) drives the
+* output transistor's base; an op amp holds the reference transistor's collector at Iref. Matched NPN pair (generic model with
+* 0.5 ohm emitter bulk resistance). Sweep the CV 0..10 V and read the output current.
+.model QM NPN(IS=1e-14 BF=200 RE=0.5 RB=10 RC=1 VAF=100)
+.param iref=100n
+VCV cv 0 0
+R4 cv b2 54.9k
+R3 b2 0 1k
+Q1 c1 0 e QM
+Q2 c2 b2 e QM
+Iref vcc c1 {iref}
+Vcc vcc 0 15
+* op amp: forces c1 to 0 V by driving the common emitter
+E1 e 0 0 c1 1e6
+Vout c2x 0 0
+Rsense c2 c2x 1
+.control
+set noaskquit
+dc VCV 0 10 1
+let i = -i(Vout)
+print i
+.endc
+.end

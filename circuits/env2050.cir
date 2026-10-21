@@ -1,0 +1,10 @@
+* SSM 2050 attack (datasheet): an exponential approach to +13 V, ended by the comparator at +10 V. tau = 100 ms (0 V CV, 0.1 uF).
+Vt t 0 13
+R t c 1meg
+C c 0 0.1u IC=0
+.control
+set noaskquit
+tran 100u 400m uic
+meas tran tatk when v(c)=10 rise=1
+.endc
+.end

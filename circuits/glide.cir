@@ -1,0 +1,23 @@
+* Board 3 glide: a CA3080 OTA (behavioural: Iout = Iabc tanh(Vd / 2VT)) charges 0.1 uF, buffered and fed back to the OTA's
+* inverting input (4.7k with back-to-back 1N914s across the input). Steps of 1 V and 2 V (12 and 24 semitones at 1 V/oct).
+.param iabc=20u vstep=1
+.model D1N914 D(IS=2.5n N=1.75 RS=0.6)
+Vin in 0 PWL(0 0 1m 0 1.001m {vstep*1.0204})
+Rin in p 4.7k
+D1 p n D1N914
+D2 n p D1N914
+Bota 0 cap I = {iabc} * tanh((v(p) - v(n)) / 0.0517)
+Cg cap 0 0.1u
+Ebuf buf 0 cap 0 1
+Rfb buf n 4.7k
+Rp p 0 1g
+.control
+set noaskquit
+foreach s 1 2
+  alterparam vstep = $s
+  reset
+  tran 20u 60m
+  meas tran tg when v(buf)=$s rise=1 td=1m
+end
+.endc
+.end
