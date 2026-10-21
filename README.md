@@ -8,8 +8,9 @@ smooth controls, velocity and aftertouch).
 
 ![The Oscillators tab, Rev 2 look](docs/img/skin-rev2-osc.png)
 
-**Status: version 0.1.0, a test build.** It builds, passes the offline host test and its own engine, preset and circuit tests, and its
-CPU use on x86 is about 5 % of real time at five voices. It has **not** been installed on a device yet, and many of the knob response
+**Status: version 0.1.0, a test build.** It builds, passes the offline host test and its own engine, preset and circuit tests, and it loads, plays and
+shows its skin on a Force (2026-10-21, device). CPU on a Force (Gen1, `bench.sh`, 2026-10-21): about 28 % of one core at five voices, p99 31 %, a
+**WARN**: use a few instances, not a dozen. It has not been tried on other models, and many of the knob response
 laws are still measured guesses (see "What is measured, and what isn't"). Expect to hear the character, not a calibrated copy.
 
 *Profit-5 is an independent project, not affiliated with or endorsed by Sequential or Dave Smith Instruments. It contains no firmware,

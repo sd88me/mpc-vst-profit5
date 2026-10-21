@@ -84,7 +84,7 @@ the filter's cutoff span, and the pot mux order on the later board 3.
 - **All programs:** the 38 programs x 2 revisions x 2 qualities (152 renders, chord + release) have no NaN and no filter resets, with a max peak of 0.961 (the limiter's ceiling is 1.0).
   4 renders are quiet: 5-5 Helicopter in both revisions and qualities. Its amp attack of 8 now takes about 14 s under the datasheet law, so the 1.5 s test chord barely opens, and its sheet has every mixer level at 0.5 of 10. To check against a recording.
 - **Glide:** 12 semitones take 411 ms and 24 take 796 ms at glide 8 (ratio 1.94, a constant rate).
-- **CPU:** x86 bench (`tools/bench.c`, five voices held): 2.3-2.7 % of real time in Eco and 4.8-4.9 % in High. The device bench is still to do (docs/BENCH.md).
+- **CPU:** x86 bench (`tools/bench.c`, five voices held): 2.3-2.7 % of real time in Eco and 4.8-4.9 % in High. Device bench (Force, 2026-10-21, `tools/bench.sh -v 1,3,5`, `vst/bench.txt`): 1 voice 6.8 % mean, 3 voices 17.5 %, 5 voices 28.3 % (p99 29.4 %), Q-Link sweep p99 31.4 %, worst block 37.3 %: WARN (docs/BENCH.md). The device is about six times the x86 figure; the per-voice filter and the exponential converters are the place to look.
 
 ## Build and test
 ```

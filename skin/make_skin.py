@@ -14,7 +14,7 @@ import os
 import random
 import sys
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 SS = 2                      # drawing scale
 W, H = 1280, 628            # MPC plugin area
@@ -27,6 +27,8 @@ INK = (234, 234, 228)
 LED_ON, LED_OFF = (255, 46, 38), (78, 16, 14)
 STYLE = os.environ.get("P5_STYLE", "rev2")   # rev2: the 1978-80 panel (OSC 1 / 2, lighter wood); rev4: the reissue's naming and darker walnut
 FONT_DIR = os.environ.get("P5_FONT_DIR", "/usr/share/fonts/truetype/freefont")   # GNU FreeFont (FreeSans), font exception: rendered art is ours
+
+PLAQUE_FONT = os.environ.get("P5_PLAQUE_FONT", os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "UncialAntiqua-Regular.ttf"))   # Uncial Antiqua (SIL OFL 1.1), the nameplate lettering; falls back to FreeSans Bold
 
 _fonts = {}
 
@@ -215,7 +217,7 @@ class Tab:
             x1, y1 = polar(cx, cy, r + 6.5, deg)
             self.d.line((S(x0), S(y0), S(x1), S(y1)), fill=INK, width=S(1))
 
-    def knob(self, key, cx, cy, r=27, label=None, silver=False, scale=True, vs=14):
+    def knob(self, key, cx, cy, r=27, label=None, silver=False, scale=True, vs=14, hide_value=False):
         if scale:
             self.scale(cx, cy, r)
         sh = Image.new("RGBA", self.hi.size, (0, 0, 0, 0))               # contact shadow, fixed (it does not turn)
@@ -223,7 +225,7 @@ class Tab:
         self.hi.paste(Image.alpha_composite(self.hi.convert("RGBA"), sh.filter(ImageFilter.GaussianBlur(S(3)))).convert("RGB"))
         if label:
             self.text(cx, cy + r + 24, label, 10.5)
-        self.controls.append(dict(kind="knob", key=key, cx=cx, cy=cy, r=r, silver=silver, vs=vs))
+        self.controls.append(dict(kind="knob", key=key, cx=cx, cy=cy, r=r, silver=silver, vs=vs, hide=hide_value))
 
     def switch(self, key, cx, cy, w=34, label=None, color="black", above=None):
         if label:
@@ -240,16 +242,63 @@ class Tab:
                "pulse": [(-w, h), (-w * 0.45, h), (-w * 0.45, -h), (w * 0.45, -h), (w * 0.45, h), (w, h)]}[shape]
         d.line([(S(cx + x), S(cy + y)) for x, y in pts], fill=INK, width=S(1.6), joint="curve")
 
-    def plaque(self, cx, cy, text):
-        """Our own wordmark on a brushed plate (not the instrument's)."""
-        w, h = 168, 40
-        pl = Image.new("RGB", (S(w), S(h)), (200, 200, 204))
-        n = Image.effect_noise((S(w), S(h)), 18).resize((S(w), S(h))).filter(ImageFilter.BoxBlur(S(8)))
-        pl = Image.blend(pl, Image.merge("RGB", [n.point(lambda v: 150 + v // 3)] * 3), 0.45)
-        dd = ImageDraw.Draw(pl)
-        dd.rounded_rectangle((0, 0, S(w) - 1, S(h) - 1), radius=S(6), outline=(120, 120, 124), width=S(1))
-        dd.text((S(w / 2), S(h / 2)), text, font=font(22, True, cond=False), fill=(36, 36, 40), anchor="mm")
-        self.hi.paste(pl, (S(cx - w / 2), S(cy - h / 2)))
+    def plaque(self, cx, cy, text, w=250, h=74):
+        """Our own wordmark on a bevelled, brushed-silver nameplate with screws and engraved lettering (not the instrument's)."""
+        W, H = S(w), S(h)
+        rnd = random.Random(5)
+        # brushed aluminium: horizontal streaks over a soft vertical gradient
+        base = Image.new("L", (W, H))
+        px = base.load()
+        streak = [rnd.randint(-14, 14) for _ in range(H)]
+        for y in range(H):
+            g = 206 + int(26 * math.cos((y / H - 0.35) * math.pi)) + streak[y]
+            for x in range(W):
+                px[x, y] = max(0, min(255, g))
+        base = base.filter(ImageFilter.GaussianBlur(0.6)).filter(ImageFilter.BoxBlur(1))
+        n = Image.effect_noise((W, H), 10).filter(ImageFilter.GaussianBlur(S(14)))
+        base = ImageChops.add(base, n.point(lambda v: (v - 128) // 6 if v > 128 else 0))
+        pl = Image.merge("RGB", [base.point(lambda v, c=c: min(255, int(v * c))) for c in (0.99, 1.0, 1.03)]).convert("RGBA")
+        d = ImageDraw.Draw(pl)
+        r = S(9)
+        mask = Image.new("L", (W, H), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, W - 1, H - 1), radius=r, fill=255)
+        # bevel: light top-left edge, dark bottom-right edge, then an inset face line
+        d.line((r, 1, W - r, 1), fill=(255, 255, 255, 255), width=S(2))
+        d.line((1, r, 1, H - r), fill=(255, 255, 255, 230), width=S(2))
+        d.line((r, H - 2, W - r, H - 2), fill=(70, 72, 78, 255), width=S(2))
+        d.line((W - 2, r, W - 2, H - r), fill=(86, 88, 94, 255), width=S(2))
+        d.rounded_rectangle((S(7), S(7), W - S(8), H - S(8)), radius=S(5), outline=(120, 122, 128, 255), width=S(1))
+        d.rounded_rectangle((S(8), S(8), W - S(7), H - S(7)), radius=S(5), outline=(250, 250, 252, 160), width=S(1))
+        # screws
+        for sx in (S(16), W - S(16)):
+            sy = H // 2
+            sr = S(7)
+            d.ellipse((sx - sr, sy - sr, sx + sr, sy + sr), fill=(150, 152, 158, 255), outline=(60, 62, 66, 255), width=S(1))
+            d.ellipse((sx - sr + S(1), sy - sr + S(1), sx + sr - S(2), sy + sr - S(2)), outline=(232, 234, 238, 255), width=S(1))
+            d.line((sx - S(4.5), sy + S(1.5), sx + S(4.5), sy - S(1.5)), fill=(40, 40, 44, 255), width=S(1.6))
+        # engraved lettering: dark ink, a light lip below-right and a shadow above-left
+        try:
+            f = ImageFont.truetype(PLAQUE_FONT, S(45))
+            try:
+                f.set_variation_by_axes([850])
+            except Exception:
+                pass
+        except OSError:
+            f = font(60, True)
+        tx, ty = W // 2, H // 2 + S(1)
+        lt = Image.new("L", (W, H), 0)
+        ImageDraw.Draw(lt).text((tx, ty), text, font=f, fill=255, anchor="mm")
+        lip = ImageChops.offset(lt, S(1.4), S(1.6))
+        sh = ImageChops.offset(lt, -S(1), -S(1.2))
+        pl.paste(Image.new("RGBA", (W, H), (255, 255, 255, 255)), (0, 0), lip.point(lambda v: v * 200 // 255))
+        pl.paste(Image.new("RGBA", (W, H), (60, 60, 66, 255)), (0, 0), sh.filter(ImageFilter.GaussianBlur(S(0.7))).point(lambda v: v * 150 // 255))
+        pl.paste(Image.new("RGBA", (W, H), (28, 28, 32, 255)), (0, 0), lt)
+        # drop shadow of the plate on the panel
+        x0, y0 = S(cx - w / 2), S(cy - h / 2)
+        shd = Image.new("RGBA", self.hi.size, (0, 0, 0, 0))
+        ImageDraw.Draw(shd).rounded_rectangle((x0 + S(2), y0 + S(5), x0 + W + S(3), y0 + H + S(7)), radius=r, fill=(0, 0, 0, 190))
+        self.hi.paste(Image.alpha_composite(self.hi.convert("RGBA"), shd.filter(ImageFilter.GaussianBlur(S(4)))).convert("RGB"))
+        self.hi.paste(pl.convert("RGB"), (x0, y0), mask)
 
     def display(self, cx, cy, digits):
         w, h = 74, 42
@@ -265,7 +314,7 @@ def tab_osc():
     t = Tab("OSC", "OSCILLATORS")
     # row 1: POLY-MOD, OSCILLATOR A
     t.box(42, 26, 424, 205, "POLY-MOD")
-    t.knob("pm_fenv", 104, 108, label="FILT ENV"); t.knob("pm_oscb", 206, 108, label="OSC B")
+    t.knob("pm_fenv", 104, 108, label="FILT ENV", hide_value=True); t.knob("pm_oscb", 206, 108, label="OSC B", hide_value=True)
     t.bracket(62, 248, 186, "SOURCE AMOUNT")
     for k, x, s in (("pm_freq_a", 290, "FREQ A"), ("pm_pw_a", 342, "PW A"), ("pm_filter", 394, "FILTER")):
         t.switch(k, x, 104, above=s)
@@ -277,7 +326,6 @@ def tab_osc():
     t.bracket(662, 774, 186, "SHAPE")
     t.knob("a_pw", 892, 108, r=30, label="PULSE WIDTH")
     t.switch("a_sync", 1040, 104, label="SYNC")
-    t.plaque(1150, 108, "Profit-5")
     # row 2: LFO, OSCILLATOR B
     t.box(42, 223, 424, 402, "LFO")
     t.knob("lfo_init", 104, 305, label="INITIAL AMOUNT"); t.knob("lfo_freq", 206, 305, label="FREQUENCY")
@@ -293,13 +341,14 @@ def tab_osc():
     t.switch("b_lo", 1114, 301, label="LO FREQ"); t.switch("b_kbd", 1184, 301, label="KEYBOARD")
     # row 3: WHEEL-MOD, glide, unison
     t.box(42, 420, 424, 600, "WHEEL-MOD")
-    t.knob("wm_mix", 104, 502, label=None)
+    t.knob("wm_mix", 104, 502, label=None, hide_value=True)
     t.text(70, 560, "LFO", 9.5); t.text(140, 560, "NOISE", 9.5); t.text(104, 578, "SOURCE MIX", 10)
-    for k, x, s in (("wm_freq_a", 190, "FREQ A"), ("wm_freq_b", 246, "FREQ B"), ("wm_pw_a", 302, "PW A"), ("wm_pw_b", 358, "PW B"), ("wm_filter", 410, "FILTER")):
+    for k, x, s in (("wm_freq_a", 182, "FREQ A"), ("wm_freq_b", 232, "FREQ B"), ("wm_pw_a", 282, "PW A"), ("wm_pw_b", 332, "PW B"), ("wm_filter", 382, "FILTER")):
         t.switch(k, x, 498, w=30, above=s)
-    t.bracket(170, 418, 580, "DESTINATION")
+    t.bracket(162, 402, 580, "DESTINATION")
     t.knob("glide", 548, 502, r=30, label="GLIDE RATE")
     t.switch("unison", 680, 498, label="UNISON")
+    t.plaque(1105, 558, "profit~5")
     t.qlinks = [("OSC KNOBS", ["pm_fenv", "pm_oscb", "a_freq", "a_pw", "lfo_init", "lfo_freq", "b_freq", "b_fine", "b_pw", "wm_mix", "glide"]),
                 ("MOD SWITCHES", ["pm_freq_a", "pm_pw_a", "pm_filter", "lfo_saw", "lfo_tri", "lfo_square", "wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b", "wm_filter"]),
                 ("OSC SWITCHES", ["a_saw", "a_pulse", "a_sync", "b_saw", "b_tri", "b_pulse", "b_lo", "b_kbd", "unison"])]
@@ -319,8 +368,8 @@ def tab_filter():
     for k, x, s in (("f_attack", 634, "ATTACK"), ("f_decay", 776, "DECAY"), ("f_sustain", 918, "SUSTAIN"), ("f_release", 1060, "RELEASE")):
         t.knob(k, x, 305, r=30, label=s)
     t.knob("vintage", 104, 305, r=30, label="VINTAGE")
-    t.knob("tune", 226, 305, r=26, label="MASTER TUNE", silver=True)
-    t.knob("volume", 348, 305, r=26, label="VOLUME", silver=True)
+    t.knob("tune", 226, 305, r=26, label="MASTER TUNE")
+    t.knob("volume", 348, 305, r=26, label="VOLUME")
     t.box(42, 420, 410, 600, "TOUCH")
     for k, x, s in (("vel_filter", 88, "FLT"), ("vel_amp", 172, "AMP"), ("at_filter", 280, "FLT"), ("at_lfo", 364, "LFO")):
         t.knob(k, x, 494, r=21, label=s)
@@ -420,8 +469,8 @@ def build(root):
                     strip.paste(f, (0, i * side))
                 strip.save(os.path.join(art, name + ".png"), optimize=True)
                 prev.alpha_composite(frames[int(round(dn * (n - 1)))].resize((S(side), S(side))).convert("RGBA"), (S(c["cx"] - side / 2), S(c["cy"] - side / 2)))
-                lines.append('knob cx=%d cy=%d r=%d label="" key=%s strip=art/%s.png frames=%d ns=0 vs=%d bw=%d'
-                             % (c["cx"], c["cy"] + Y_OFF, c["r"], k, name, n, c["vs"], max(76, 2 * c["r"] + 40)))
+                lines.append('knob cx=%d cy=%d r=%d label="" key=%s strip=art/%s.png frames=%d ns=22 vs=%d bw=%d ink=151517 ink_dim=%s'
+                             % (c["cx"], c["cy"] + Y_OFF, c["r"], k, name, n, c["vs"], max(76, 2 * c["r"] + 40), "151517" if c.get("hide") else "c8c8c0"))
             else:
                 w = c["w"] + 6
                 pics = []
