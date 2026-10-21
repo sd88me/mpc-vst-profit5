@@ -42,7 +42,7 @@ and stays bounded. Bass at k = 3 is 0.25 (= 1/(1+k)). Drift std is 0.81.
 - The native layout is 24 x 7-bit pots + 24 switches, 40 programs (5 x 8), which becomes the VST parameter order. Wheel amounts, master tune, volume and glide aren't stored.
 - **Factory sheets:** 38 programs transcribed by hand from the 1978 patch sheets into `tools/factory_sheets.txt`. `tools/gen_presets.py` generates
   `src/presets_factory.h`, and `test/test_presets.c` checks it. See `docs/PRESETS.md`.
-- Imports from the user's own files at run time: later `.syx` dumps, Repro-5 `.h2p`, or a cassette WAV decoder following the firmware routines.
+- Imports from the user's own files: Repro-5 `.h2p` (and zips of them) from `<plugin dir>/banks`, read once at create (`src/p5_import.c`, 0.2.0); later `.syx` dumps or a cassette WAV decoder following the firmware routines are still to do.
 
 ## Next
 1. Pot/switch index map from a later board 3 schematic, or by tracing the code.

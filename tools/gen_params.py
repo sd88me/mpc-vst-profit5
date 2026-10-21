@@ -65,6 +65,8 @@ def main():
                 del e["display"]
         out.append(e)
     out.append({"key": "preset", "name": "Program", "options": names, "default": names[0]})
+    # appended 2026-10-22: imported Repro-5 patches from <plugin dir>/banks (src/p5_import.c); 0 = none, the plugin answers "user_display" with the name
+    out.append({"key": "user", "name": "Imported", "min": 0, "max": 128, "default": 0, "display": "int"})
     here = os.path.join(HERE, "..")
     json.dump({"name": "Profit-5", "params": out}, open(os.path.join(here, "vst", "params.json"), "w"), indent=1)
     with open(os.path.join(here, "src", "plugin_keys.h"), "w") as f:

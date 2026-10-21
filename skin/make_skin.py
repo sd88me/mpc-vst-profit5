@@ -390,6 +390,7 @@ def tab_program():
     t.display(150, 120, "11")
     t.text(150, 160, "GROUP  BANK  PROG", 10)
     t.knob("preset", 330, 128, r=34, label="PROGRAM", vs=16)
+    t.knob("user", 1150, 128, r=34, label="IMPORTED", vs=16, scale=False)                 # Repro-5 .h2p patches from the banks folder; the name is the value text
     for i in range(8):                                                       # the program buttons, printed (not controls)
         x = 540 + i * 70
         t.text(x, 76, str(i + 1), 12)
@@ -405,11 +406,12 @@ def tab_program():
     t.switch("rev", 560, 446, above="REV 2 / 4", label="REV")
     t.box(670, 330, 1238, 600, "ABOUT")
     for i, s in enumerate(["Five voices, two VCOs, a 4-pole lowpass, Poly-Mod.", "REV 2: SSM-style VCOs, filter and envelopes, stepped knobs.",
-                           "REV 4: CEM-style, smooth knobs, velocity and aftertouch.", "Programs: the 38 factory sheets, transcribed."]):
+                           "REV 4: CEM-style, smooth knobs, velocity and aftertouch.", "Programs: the 38 factory sheets, transcribed.",
+                           "IMPORTED: Repro-5 .h2p files (or zips) in the plugin's banks folder."]):
         t.text(700, 380 + i * 34, s, 12, anchor="lm", bold=False)
     if STYLE == "rev2":
-        t.text(700, 380 + 4 * 34, "* not on the 1978 panel: INIT AMT, REV, HALF/FULL, VINTAGE, TOUCH.", 12, anchor="lm", bold=False)
-    t.qlinks = [("PROGRAM", ["preset", "voices", "unison", "quality", "rev"])]
+        t.text(700, 380 + 5 * 34, "* not on the 1978 panel: INIT AMT, REV, HALF/FULL, VINTAGE, TOUCH.", 12, anchor="lm", bold=False)
+    t.qlinks = [("PROGRAM", ["preset", "user", "voices", "unison", "quality", "rev"])]
     return t
 
 

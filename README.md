@@ -17,6 +17,20 @@ laws are still measured guesses (see "What is measured, and what isn't"). Expect
 ROM image, manual, schematic, patch-sheet scan or photograph: everything in it is code and generated art. The patch names are the factory
 program names as published in the patch-sheet booklet; their knob settings were read by hand.*
 
+## Importing Repro-5 patches (0.2.0)
+Put u-he Repro-5 `.h2p` patch files, or `.zip` files of them, in the plugin's `banks` folder (`/sdcard/Synths/sd88me - VST - Profit-5/banks/`;
+the installer keeps it when you upgrade). The plugin reads them once when it loads, up to 128, sorted by file name, and the **IMPORTED** knob on
+the PROGRAM tab (also a Q-Link) picks one: its name shows under the knob, 0 leaves the sound as it is. MIDI program change 38 and up picks
+imported patch 1 and up. Loose files are only read in the banks folder itself (no sub-folders), a zip may contain folders. The patches are
+yours: none ships with the plugin.
+
+What carries over: oscillator pitch and shapes, pulse widths, sync, mix, the filter (cutoff, resonance, key tracking as off / half / full),
+both envelopes, glide, Poly-Mod, voice detune (as Vintage), and the filter tweak (it chooses Rev 2 or Rev 4, with the velocity depths in Rev 4).
+What does not: the LFO and the wheel section (reset to off), an inverted filter envelope (set to zero), anything Repro-5 has that this panel
+does not. The conversion is by dial position, so it sounds like the patch's idea of the sound, not a copy; it follows the same file format
+reading as [TinyPro5](https://github.com/fleshinachair/TinyPro5) (MIT), whose DEFLATE and zip code it adapts. Master tune, volume, voices
+and quality stay as you set them. `.syx` dumps are not read yet.
+
 ## Install
 
 Requires a **modded MPC OS standalone device with root shell (SSH) access**; stock MPC OS doesn't allow installing plugins this way, and doing so is
@@ -98,7 +112,7 @@ Honest status, offline on x86 (2026-10-21):
 - **Still guessed:** the start of the envelope and LFO ranges, the cutoff span, resonance law, Poly-Mod and Wheel-Mod depths, and a few summing-amp inputs the
   scan doesn't show. Rev 4 is modelled from public descriptions, not from a unit or its schematics.
 - **Known quiet program:** 5-5 Helicopter barely sounds in a short test (its amplifier attack is about 14 s under the datasheet law). To check against a recording.
-- **Not done:** device test and bench, a cassette-dump importer, a second output. A recording of a real unit would let me fit most of the guessed laws.
+- **Not done:** device test and bench, a cassette-dump and `.syx` importer, a second output. A recording of a real unit would let me fit most of the guessed laws.
 
 What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written up, with the evidence, in [`docs/ENGINE.md`](docs/ENGINE.md), [`docs/FIRMWARE.md`](docs/FIRMWARE.md) and
 [`docs/PRESETS.md`](docs/PRESETS.md).
@@ -120,6 +134,8 @@ python3 tools/gen_presets.py && python3 tools/gen_params.py          # src/prese
 python3 skin/make_skin.py vst                                         # the skin (P5_STYLE=rev4 for the reissue look)
 gcc -O2 -Wall -Wextra -Werror -std=c11 -fsanitize=address,undefined test/test_engine.c src/engine.c -lm && ./a.out
 gcc -O2 -Wall -Wextra -Werror -fsanitize=address,undefined test/test_kernels.c -lm && ./a.out
+gcc -O1 -Wall -Wextra -Werror -std=c11 -fsanitize=address,undefined test/test_import.c src/p5_import.c -lm && ./a.out                    # .h2p import
+gcc -O1 -std=gnu11 -fsanitize=address,undefined -Isrc -Ianalog -I../mpc-vst-plugins/wrapper test/test_plugin_import.c src/engine.c src/p5_import.c -lm && ./a.out
 python3 tools/spice_check.py                                          # needs ngspice
 ../mpc-vst-plugins/tools/test_port.sh vst/vst.json                    # the wrapper's offline host test
 vst/build.sh                                                          # the device build (Docker), or run the "Release (draft)" workflow

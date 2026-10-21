@@ -26,6 +26,7 @@ jobs:
       build: vst/build.sh
       host_test: '"$MPC_VST/tools/test_port.sh" vst/vst.json'
       about: "Five-voice analog polysynth modelled on an early SSM-chip Prophet-5: Rev 2 / Rev 4 voicing, 38 factory programs."
+      user_data: banks
       plugin_id: profit-5
       license: MIT
       dry_run: ${{ inputs.dry_run }}

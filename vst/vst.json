@@ -9,10 +9,10 @@
   "programs": {"param": "preset"},
   "art": "html",
   "layout": "layout.conf",
-  "defines": {"HAS_DISPLAY_REV": 1, "DISPLAY_REV_NO_UPDATE": 1},
+  "defines": {"HAS_DISPLAY_REV": 1, "DISPLAY_REV_NO_UPDATE": 1, "MODULE_SUBDIR": "\"banks\""},
   "build": {
     "root": "..",
-    "sources": ["src/plugin.c", "src/engine.c"],
+    "sources": ["src/plugin.c", "src/engine.c", "src/p5_import.c"],
     "cflags": ["-Isrc", "-Ianalog", "-O2"],
     "libs": ["-lm"]
   }
