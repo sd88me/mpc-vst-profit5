@@ -5,3 +5,6 @@
 *.wav
 build/
 Preset_Banks/
+vst/build/
+vst/preview/
+skin/__pycache__/
