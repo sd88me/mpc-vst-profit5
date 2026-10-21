@@ -16,12 +16,12 @@ on:
 
 jobs:
   vst:
-    uses: sd88me/mpc-vst-plugins/.github/workflows/vst-release.yml@c121b12ae00042115ed98326ac7ccb7ee5ad6151
+    uses: sd88me/mpc-vst-plugins/.github/workflows/vst-release.yml@3783efc00898e3f5091934b7169f457bb9be2656
     permissions: { contents: write }
     with:
       tag: profit-5-vst-v${{ inputs.version }}
       version: ${{ inputs.version }}
-      tools_ref: c121b12ae00042115ed98326ac7ccb7ee5ad6151
+      tools_ref: 3783efc00898e3f5091934b7169f457bb9be2656
       vst_dir: vst
       build: vst/build.sh
       host_test: '"$MPC_VST/tools/test_port.sh" vst/vst.json'
