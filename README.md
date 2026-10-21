@@ -99,7 +99,7 @@ Honest status, offline on x86 (2026-10-21):
 - **Known quiet program:** 5-5 Helicopter barely sounds in a short test (its amplifier attack is about 14 s under the datasheet law). To check against a recording.
 - **Not done:** device test and bench, a cassette-dump importer, a second output. A recording of a real unit would let me fit most of the guessed laws.
 
-All of this is written up, with the evidence, in [`docs/ENGINE.md`](docs/ENGINE.md), [`docs/FIRMWARE.md`](docs/FIRMWARE.md) and
+What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written up, with the evidence, in [`docs/ENGINE.md`](docs/ENGINE.md), [`docs/FIRMWARE.md`](docs/FIRMWARE.md) and
 [`docs/PRESETS.md`](docs/PRESETS.md).
 
 ## Controls
