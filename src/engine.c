@@ -23,13 +23,15 @@ typedef struct {
     float drift_cents, drift_cut_oct, tol_cut_oct, tol_env;
     float atk_scale, dec_scale;
     int ssm_filter, cv_steps, touch;
+    float pulse_amp;        /* pulse level against the saw: SSM 2030 7.5 Vpp against 10 Vpp (datasheet) */
 } p5_rev_t;
 
 static const p5_rev_t REV[2] = {
-    /* Rev 2: SSM 2030 / 2040 / 2050. Bias step: "a little more than a semitone" over the firmware's 0..100 counts. */
-    { 3.0e-6f, 0.20f, 0.03f, 0.04f, 0.06f, 0.7f, 3.0f, 0.012f, 0.06f, 0.08f, 1.0f, 1.0f, 1, 1, 0 },
+    /* Rev 2: SSM 2030 / 2040 / 2050. Bias step: "a little more than a semitone" over the firmware's 0..100 counts.
+     * Reset: the 2030's saw fall time, 500 ns (datasheet). */
+    { 0.5e-6f, 0.30f, 0.03f, 0.04f, 0.06f, 0.7f, 3.0f, 0.012f, 0.06f, 0.08f, 1.0f, 1.0f, 1, 1, 0, 0.75f },
     /* Rev 4: CEM-style VCO and filter, faster envelopes, smooth pots, velocity and pressure */
-    { 1.0e-6f, 0.10f, 0.0f, 0.0f, 0.0f, 0.2f, 1.5f, 0.006f, 0.03f, 0.03f, 0.6f, 0.7f, 0, 0, 1 },
+    { 0.2e-6f, 0.10f, 0.0f, 0.0f, 0.0f, 0.2f, 1.5f, 0.006f, 0.03f, 0.03f, 0.6f, 0.7f, 0, 0, 1, 1.0f },
 };
 
 static inline float clampf(float x, float a, float b) { return x < a ? a : x > b ? b : x; }
@@ -49,16 +51,20 @@ static inline float pot(const p5_engine_t *e, int id) { return rev(e)->cv_steps 
 /* oscillator frequency pots: 61 semitone steps in both revisions (the firmware halves them; the Rev 4 panel is also stepped) */
 static inline float semis_pot(const p5_engine_t *e, int id) { return floorf(e->p[id] * 60 + 0.5f); }
 
-/* envelope time law: 1.5 ms .. 12 s, exponential in the pot (assumption until measured) */
-static inline float env_time(float d) { return 0.0015f * powf(10.0f, 3.9f * d); }
+/* SSM 2050 time constant (datasheet): 2 V per decade through the 100k input, positive = longer. The pot's CV spans 0..10.67 V
+ * (the DAC), so 5.33 decades. Anchor (pot 0 = 0.5 ms) assumed; capped at 30 s. Attack approaches +13 V and the comparator ends it
+ * at +10 V (target 1.3, time to the top 1.466 tau); decay and release are exponentials to sustain and to 0. */
+static inline float env_tau(float d) { float t = 0.0005f * powf(10.0f, 5.333f * d); return t < 30.0f ? t : 30.0f; }
+#define ATK(d) (1.4663f * env_tau(d))
+#define DEC(d) (4.6f * env_tau(d))
 
 static void env_coefs(p5_engine_t *e) {
     const p5_rev_t *r = rev(e);
     float rel = sw(e, P5P_RELEASE);
-    ma_env_set(&e->fk, env_time(pot(e, P5P_F_A)) * r->atk_scale, env_time(pot(e, P5P_F_D)) * r->dec_scale, pot(e, P5P_F_S),
-               rel ? env_time(pot(e, P5P_F_R)) * r->dec_scale : 0.005f, 1.3f, e->fsi);
-    ma_env_set(&e->ak, env_time(pot(e, P5P_A_A)) * r->atk_scale, env_time(pot(e, P5P_A_D)) * r->dec_scale, pot(e, P5P_A_S),
-               rel ? env_time(pot(e, P5P_A_R)) * r->dec_scale : 0.005f, 1.3f, e->fsi);
+    ma_env_set(&e->fk, ATK(pot(e, P5P_F_A)) * r->atk_scale, DEC(pot(e, P5P_F_D)) * r->dec_scale, pot(e, P5P_F_S),
+               rel ? DEC(pot(e, P5P_F_R)) * r->dec_scale : 0.005f, 1.3f, e->fsi);
+    ma_env_set(&e->ak, ATK(pot(e, P5P_A_A)) * r->atk_scale, DEC(pot(e, P5P_A_D)) * r->dec_scale, pot(e, P5P_A_S),
+               rel ? DEC(pot(e, P5P_A_R)) * r->dec_scale : 0.005f, 1.3f, e->fsi);
 }
 
 static void set_rate(p5_engine_t *e) {
@@ -208,7 +214,8 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     const int pm_fa = sw(e, P5P_PM_DEST_FA), pm_pw = sw(e, P5P_PM_DEST_PWA), pm_fi = sw(e, P5P_PM_DEST_FILT);
     const int wm_fa = sw(e, P5P_WM_FA), wm_fb = sw(e, P5P_WM_FB), wm_pwa = sw(e, P5P_WM_PWA), wm_pwb = sw(e, P5P_WM_PWB), wm_fi = sw(e, P5P_WM_FILT);
     const int l_saw = sw(e, P5P_LFO_SAW), l_tri = sw(e, P5P_LFO_TRI), l_sqr = sw(e, P5P_LFO_SQR);
-    const float lfo_hz = 0.1f * fexp2(8 * pot(e, P5P_LFO_FREQ));             /* 0.1 .. 25.6 Hz (assumption) */
+    const float lfo_hz = 0.5f * fexp2(5.333f * pot(e, P5P_LFO_FREQ));         /* the LFO is a 2030 at 1 V/oct whose CV is halved (100k/100k,
+                                                                                 board 3): 5.33 octaves; 0.5 Hz anchor assumed, 20 Hz top */
     const float wm_mix = pot(e, P5P_WM_MIX);
     const float glide = pot(e, P5P_GLIDE);
     /* Glide is a CA3080 OTA charging 0.1 uF (board 3 p3): a constant slew rate, its current set exponentially by the glide CV
@@ -267,7 +274,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 x->ph[1] = pb;
                 if (b_saw) ob += saw_bow(ma_osc_saw(pb, inc_b), r->saw_bow);
                 if (b_tri) ob += tri_b(pb, inc_b, r->tri_sym * x->tol[4], r->tri_glitch);
-                if (b_pul) ob += ma_osc(MA_PULSE, pb, inc_b, pw_b);
+                if (b_pul) ob += r->pulse_amp * ma_osc(MA_PULSE, pb, inc_b, pw_b);
                 x->out_b = ob;
                 /* osc A (slave), shapes summed; sync resets it when B wraps */
                 float pa = x->ph[0] + inc_a;
@@ -275,12 +282,12 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 float oa = x->sync_corr;
                 x->sync_corr = 0;
                 if (a_saw) oa += saw_bow(ma_osc_saw(pa, inc_a), r->saw_bow);
-                if (a_pul) oa += ma_osc(MA_PULSE, pa, inc_a, pw_a);
+                if (a_pul) oa += r->pulse_amp * ma_osc(MA_PULSE, pa, inc_a, pw_a);
                 if (sync && wrap && (a_saw || a_pul)) {
                     float d = inc_b > 0 ? pb / inc_b : 0, now, next;
                     if (d > 1) d = 1;
                     if (a_saw) { ma_sync(MA_SAW, 0, pa, inc_a, d, &now, &next); oa += now; x->sync_corr += next; }
-                    if (a_pul) { ma_sync(MA_PULSE, pw_a, pa, inc_a, d, &now, &next); oa += now; x->sync_corr += next; }
+                    if (a_pul) { ma_sync(MA_PULSE, pw_a, pa, inc_a, d, &now, &next); oa += r->pulse_amp * now; x->sync_corr += r->pulse_amp * next; }
                     pa = inc_a * d;
                 }
                 x->ph[0] = pa;
