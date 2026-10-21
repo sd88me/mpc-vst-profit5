@@ -18,10 +18,14 @@ program names as published in the patch-sheet booklet; their knob settings were 
 
 ## Install
 
+Requires a **modded MPC OS standalone device with root shell (SSH) access**; stock MPC OS doesn't allow installing plugins this way, and doing so is
+unofficial: back up first and use at your own risk. MPC OS 3.x (the skin format).
+
 1. Download the zip for your device from the [releases](https://github.com/sd88me/mpc-vst-profit5/releases): `-mpc-armv7.zip` for Gen1
-   (MPC Live / X / One, Force) and `-mpc-aarch64.zip` for Gen2.
-2. Unzip, and run `install.sh` (or copy the plugin folder into a `Synths` folder by hand; `INSTALL.md` in the zip has both).
-3. Restart MPC, add an instrument track, and choose **Profit-5**. MPC OS 3.x only (the skin format).
+   (Force, MPC Live / One / X / Key) and `-mpc-aarch64.zip` for Gen2 (**Gen2 is untested**).
+2. Unzip, copy the folder to the device (`scp -r Profit-5-0.1.0 root@<device-ip>:/tmp/`) and run `ssh root@<device-ip> sh /tmp/Profit-5-0.1.0/install.sh`.
+   Save your project first: the installer stops MPC, copies the plugin into `/sdcard/Synths`, backs up `MPC.settings`, adds the plugin to the list and restarts MPC.
+3. Add **Profit-5** to a track from the instrument plugin browser. `INSTALL.md` in the zip has the manual steps too.
 
 ## What you get
 
