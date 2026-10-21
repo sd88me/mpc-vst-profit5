@@ -5,7 +5,7 @@
 
 Every material is procedural (no photo, no traced art, no logo): the black face, walnut cheeks, white silkscreen, knurled black
 knobs with a white pointer, aluminium caps, square switch caps with red LEDs, the red seven-segment glass. Each tab is drawn once
-at 2x without its controls; every control is then a filmstrip (knobs, 64 frames over 300 degrees, matching the printed 0-10 scale)
+at 2x without its controls; every control is then a filmstrip (knobs, 128 frames over 300 degrees, matching the printed 0-10 scale)
 or an off/on pair cut from that tab with the control drawn in place, so each frame sits exactly over its spot.
 Process: mpc-vst-plugins .claude/skills/panel-skin/SKILL.md. Needs Pillow and GNU FreeFont (apt-get install fonts-freefont-ttf)."""
 import json
@@ -20,12 +20,12 @@ SS = 2                      # drawing scale
 W, H = 1280, 628            # MPC plugin area
 Y_OFF = 86                  # layout y = screen y + 86 (Force Shadow coordinates)
 CHEEK = 26                  # walnut cheeks, left and right
-FRAMES = 64
+FRAMES = 128               # one picture per MPC knob step (MPC resamples a strip to 128 steps)
 SWEEP = 150                 # knob travel: -150 .. +150 degrees, 0 to 10 on the scale
 FACE = (21, 21, 23)
 INK = (234, 234, 228)
 LED_ON, LED_OFF = (255, 46, 38), (78, 16, 14)
-STYLE = os.environ.get("P5_STYLE", "rev4")   # rev4: the reissue's naming and darker walnut; rev2: the 1978-80 panel (OSC 1 / 2, lighter wood)
+STYLE = os.environ.get("P5_STYLE", "rev2")   # rev2: the 1978-80 panel (OSC 1 / 2, lighter wood); rev4: the reissue's naming and darker walnut
 FONT_DIR = os.environ.get("P5_FONT_DIR", "/usr/share/fonts/truetype/freefont")   # GNU FreeFont (FreeSans), font exception: rendered art is ours
 
 _fonts = {}
