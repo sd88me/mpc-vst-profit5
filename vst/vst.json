@@ -1,0 +1,19 @@
+{
+  "name": "Profit-5",
+  "vendor": "sd88me",
+  "uid": "Pft5",
+  "version": 1000,
+  "so": "profit_5.so",
+  "targets": ["armv7", "aarch64"],
+  "params": "params.json",
+  "programs": {"param": "preset"},
+  "art": "html",
+  "layout": "layout.conf",
+  "defines": {"HAS_DISPLAY_REV": 1, "DISPLAY_REV_NO_UPDATE": 1},
+  "build": {
+    "root": "..",
+    "sources": ["src/plugin.c", "src/engine.c"],
+    "cflags": ["-Isrc", "-Ianalog", "-O2"],
+    "libs": ["-lm"]
+  }
+}

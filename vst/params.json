@@ -1,0 +1,510 @@
+{
+ "name": "Profit-5",
+ "params": [
+  {
+   "key": "pm_fenv",
+   "name": "PM Filt Env",
+   "min": 0,
+   "max": 10,
+   "default": 0.5
+  },
+  {
+   "key": "pm_oscb",
+   "name": "PM Osc B",
+   "min": 0,
+   "max": 10,
+   "default": 1.0
+  },
+  {
+   "key": "a_freq",
+   "name": "A Frequency",
+   "min": 0,
+   "max": 60,
+   "default": 12,
+   "display": "int"
+  },
+  {
+   "key": "a_pw",
+   "name": "A Pulse W",
+   "min": 0,
+   "max": 10,
+   "default": 2.0
+  },
+  {
+   "key": "lfo_freq",
+   "name": "LFO Freq",
+   "min": 0,
+   "max": 10,
+   "default": 6.5
+  },
+  {
+   "key": "wm_mix",
+   "name": "WM Mix",
+   "min": 0,
+   "max": 10,
+   "default": 0.0
+  },
+  {
+   "key": "b_freq",
+   "name": "B Frequency",
+   "min": 0,
+   "max": 60,
+   "default": 26,
+   "display": "int"
+  },
+  {
+   "key": "b_fine",
+   "name": "B Fine",
+   "min": 0,
+   "max": 10,
+   "default": 1.0
+  },
+  {
+   "key": "b_pw",
+   "name": "B Pulse W",
+   "min": 0,
+   "max": 10,
+   "default": 2.0
+  },
+  {
+   "key": "glide",
+   "name": "Glide",
+   "min": 0,
+   "max": 10,
+   "default": 6.5
+  },
+  {
+   "key": "mix_a",
+   "name": "Mix Osc A",
+   "min": 0,
+   "max": 10,
+   "default": 8.5
+  },
+  {
+   "key": "mix_b",
+   "name": "Mix Osc B",
+   "min": 0,
+   "max": 10,
+   "default": 9.0
+  },
+  {
+   "key": "mix_noise",
+   "name": "Mix Noise",
+   "min": 0,
+   "max": 10,
+   "default": 1.0
+  },
+  {
+   "key": "cutoff",
+   "name": "Cutoff",
+   "min": 0,
+   "max": 10,
+   "default": 0.8
+  },
+  {
+   "key": "reso",
+   "name": "Resonance",
+   "min": 0,
+   "max": 10,
+   "default": 1.0
+  },
+  {
+   "key": "env_amt",
+   "name": "Env Amount",
+   "min": 0,
+   "max": 10,
+   "default": 7.5
+  },
+  {
+   "key": "f_attack",
+   "name": "F Attack",
+   "min": 0,
+   "max": 10,
+   "default": 4.0
+  },
+  {
+   "key": "f_decay",
+   "name": "F Decay",
+   "min": 0,
+   "max": 10,
+   "default": 5.5
+  },
+  {
+   "key": "f_sustain",
+   "name": "F Sustain",
+   "min": 0,
+   "max": 10,
+   "default": 5.0
+  },
+  {
+   "key": "f_release",
+   "name": "F Release",
+   "min": 0,
+   "max": 10,
+   "default": 4.5
+  },
+  {
+   "key": "a_attack",
+   "name": "A Attack",
+   "min": 0,
+   "max": 10,
+   "default": 4.0
+  },
+  {
+   "key": "a_decay",
+   "name": "A Decay",
+   "min": 0,
+   "max": 10,
+   "default": 4.0
+  },
+  {
+   "key": "a_sustain",
+   "name": "A Sustain",
+   "min": 0,
+   "max": 10,
+   "default": 6.0
+  },
+  {
+   "key": "a_release",
+   "name": "A Release",
+   "min": 0,
+   "max": 10,
+   "default": 5.0
+  },
+  {
+   "key": "pm_freq_a",
+   "name": "PM Freq A",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "pm_pw_a",
+   "name": "PM PW A",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "pm_filter",
+   "name": "PM Filter",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "a_saw",
+   "name": "A Saw",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "On"
+  },
+  {
+   "key": "a_pulse",
+   "name": "A Pulse",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "a_sync",
+   "name": "Sync",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "lfo_saw",
+   "name": "LFO Saw",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "lfo_tri",
+   "name": "LFO Tri",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "On"
+  },
+  {
+   "key": "lfo_square",
+   "name": "LFO Square",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "wm_freq_a",
+   "name": "WM Freq A",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "On"
+  },
+  {
+   "key": "wm_freq_b",
+   "name": "WM Freq B",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "On"
+  },
+  {
+   "key": "wm_pw_a",
+   "name": "WM PW A",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "wm_pw_b",
+   "name": "WM PW B",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "wm_filter",
+   "name": "WM Filter",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "b_saw",
+   "name": "B Saw",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "b_tri",
+   "name": "B Tri",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "b_pulse",
+   "name": "B Pulse",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "b_lo",
+   "name": "B Lo Freq",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "b_kbd",
+   "name": "B Keyboard",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "On"
+  },
+  {
+   "key": "f_kbd",
+   "name": "F Keyboard",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "On"
+  },
+  {
+   "key": "release",
+   "name": "Release",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "On"
+  },
+  {
+   "key": "unison",
+   "name": "Unison",
+   "options": [
+    "Off",
+    "On"
+   ],
+   "default": "Off"
+  },
+  {
+   "key": "rev",
+   "name": "Rev",
+   "options": [
+    "Rev 2",
+    "Rev 4"
+   ],
+   "default": "Rev 2"
+  },
+  {
+   "key": "vintage",
+   "name": "Vintage",
+   "min": 0,
+   "max": 10,
+   "default": 6.0
+  },
+  {
+   "key": "vel_filter",
+   "name": "Vel Filter",
+   "min": 0,
+   "max": 10,
+   "default": 0
+  },
+  {
+   "key": "vel_amp",
+   "name": "Vel Amp",
+   "min": 0,
+   "max": 10,
+   "default": 0
+  },
+  {
+   "key": "at_filter",
+   "name": "AT Filter",
+   "min": 0,
+   "max": 10,
+   "default": 0
+  },
+  {
+   "key": "at_lfo",
+   "name": "AT LFO",
+   "min": 0,
+   "max": 10,
+   "default": 0
+  },
+  {
+   "key": "tune",
+   "name": "Master Tune",
+   "min": -50,
+   "max": 50,
+   "default": 0,
+   "display": "int"
+  },
+  {
+   "key": "volume",
+   "name": "Volume",
+   "min": 0,
+   "max": 10,
+   "default": 8.0
+  },
+  {
+   "key": "voices",
+   "name": "Voices",
+   "min": 1,
+   "max": 5,
+   "default": 5,
+   "display": "int"
+  },
+  {
+   "key": "quality",
+   "name": "Quality",
+   "options": [
+    "Eco",
+    "High"
+   ],
+   "default": "High"
+  },
+  {
+   "key": "lfo_init",
+   "name": "LFO Initial",
+   "min": 0,
+   "max": 10,
+   "default": 0
+  },
+  {
+   "key": "kbd_half",
+   "name": "Kbd Track",
+   "options": [
+    "Full",
+    "Half"
+   ],
+   "default": "Full"
+  },
+  {
+   "key": "preset",
+   "name": "Program",
+   "options": [
+    "1-1 Brass",
+    "1-2 Low Strings",
+    "1-3 Muted Clav",
+    "1-4 Percussive Electric Piano",
+    "1-5 Flutes",
+    "1-6 Harpsichord",
+    "1-7 Sync I",
+    "1-8 Percussive Organ",
+    "2-1 Unison Glide With Resonance",
+    "2-2 Harmonium",
+    "2-3 Organ With Resonance",
+    "2-4 Toy Piano",
+    "2-5 Trumpet/Flute",
+    "2-6 Filter Mod",
+    "2-7 Reed Organ",
+    "2-8 Brass In Fifths",
+    "3-1 Pipe Organ Flutes",
+    "3-2 Sync II",
+    "3-3 Electric Piano",
+    "3-4 High Strings",
+    "3-5 Octave Sawteeth",
+    "3-6 Release-Repeat",
+    "3-7 Delayed Harmonic",
+    "3-8 Echo-Repeat",
+    "4-1 Pulse-Width Mod",
+    "4-2 Slow Sync Sweep",
+    "4-3 Fourths With Resonance",
+    "4-4 Sweeping Harmonics",
+    "4-5 Slow Sync",
+    "4-6 Random Arpeggiator",
+    "4-7 Sawtooth Arpeggiator",
+    "4-8 Clangorous Bells",
+    "5-1 Alien",
+    "5-2 Noise Sweep",
+    "5-3 Descending Bells",
+    "5-4 Descending Pulse Wave Mod",
+    "5-5 Helicopter",
+    "5-6 Resonance Bells"
+   ],
+   "default": "1-1 Brass"
+  }
+ ]
+}
