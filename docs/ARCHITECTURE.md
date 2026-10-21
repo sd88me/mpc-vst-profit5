@@ -49,3 +49,12 @@ and stays bounded. Bass at k = 3 is 0.25 (= 1/(1+k)). Drift std is 0.81.
 2. Fits for the envelope time law, cutoff scaling and LFO range, from a recording of a real unit or the user's measurements.
 3. ~~Engine~~: started 2026-10-20, see `docs/ENGINE.md` (Rev 2 / Rev 4 switch, all 38 programs render clean offline).
 4. Skin (3 tabs), host test, bench, release.
+
+## Other circuit-modelling projects (2026-10-21)
+[idlefoundry/ca-72](https://github.com/idlefoundry/ca-72) (a Minimoog model) and its [plugin-kit](https://github.com/idlefoundry/plugin-kit) are **GPL-3.0**.
+None of their code can go into this MIT repo or `mpc_analog.h` (which is written without GPL code). They are useful as method:
+- Transcribe each board into a SPICE netlist, simulate it in ngspice, and test the real-time model against the simulation (pitch, resonance, envelope shapes).
+- Measure renders the same way every time (loudness, peaks, pitch tracks, A/B comparison).
+
+For this instrument the method applies to the **discrete** parts: the master summers, exponential converters, glide OTA, noise filter and wheel-mod network.
+The SSM chips have no public transistor-level models, so the VCO, filter and envelope cores stay behavioural, fitted to datasheet curves and recordings.
