@@ -1,8 +1,9 @@
 /* Profit-5 for mpc-vst-plugins' VST2 wrapper (wrapper/engine.h): 44100 Hz, interleaved int16 stereo, string parameters.
  *
  * Keys and ranges are src/plugin_keys.h (tools/gen_params.py); each maps linearly onto the engine's 0..1. "preset" loads a
- * factory program (MPC's PRESET menu lists them through vst.json "programs"), "user" loads an imported Repro-5 .h2p patch from
- * <plugin dir>/banks (src/p5_import.c; scanned once at create), "state" saves and restores every value, and
+ * program slot: 0..37 are the factory sheets, then one slot per Repro-5 .h2p patch found in <plugin dir>/banks (src/p5_import.c;
+ * scanned once at create), the rest "Init". MPC's PRESET menu lists all P5_SLOTS through vst.json "programs" (names come from
+ * "preset:<n>"). "user" is the 0.2.0 import knob, kept so old saves load. "state" saves and restores every value, and
  * "display_rev" tells the wrapper (HAS_DISPLAY_REV) when the engine changed values by itself: a program load or MIDI.
  * No I/O, no allocation after create; nothing here blocks (mpc-vst-plugins PORTING.md, wrapper limits). */
 #include <ctype.h>
@@ -21,14 +22,14 @@
 #define FS 44100
 #define BLOCK 128
 #define P5P_COUNT_V1 58           /* values in a state saved before 0.2.0 */
-#define MAX_USER 128               /* imported patches: the first MAX_USER found in <plugin dir>/banks, sorted by file name */
+#define P5_SLOTS 128               /* programs in the MPC menu = MIDI program numbers: the factory sheets, then imported patches, then Init */
+#define MAX_USER 90                /* imported patches: the first MAX_USER found in <plugin dir>/banks, sorted by file name (P5_SLOTS - 38 factory) */
 #define MAX_H2P (256u << 10)       /* one patch file; a bank zip may be up to MAX_ZIP */
 #define MAX_ZIP (32u << 20)
 
 typedef struct {
     p5_engine_t e;
-    int preset;
-    int user;                      /* 0: a factory program (or an edit); n: imported patch n (1-based) */
+    int preset;                    /* the current slot (a later edit leaves it) */
     int nuser;
     p5_import_t *imp;              /* MAX_USER, filled once at create */
     unsigned display_rev;
@@ -131,20 +132,27 @@ static void p5_destroy(void *h) {
     free(s);
 }
 
-static void load_preset(p5_plugin_t *s, int n) {
-    if (n < 0 || n >= p5_factory_count()) return;
-    p5_load_factory(&s->e, n);
-    s->preset = n;
-    s->user = 0;
-    s->display_rev++;
+static int nfactory(void) { return p5_factory_count(); }
+
+/* the name of a slot, as the PRESET menu lists it: factory sheet, "U01 <file>" for an imported patch, "U07 Init" for a free slot */
+static int slot_name(const p5_plugin_t *s, int slot, char *b, int n) {
+    if (slot < 0 || slot >= P5_SLOTS) return 0;
+    if (slot < nfactory()) return snprintf(b, (size_t)n, "%s", p5_factory_name(slot)) + 1;
+    int u = slot - nfactory();
+    return snprintf(b, (size_t)n, "U%02d %s", u + 1, u < s->nuser ? s->imp[u].name : "Init") + 1;
 }
 
-/* an imported patch: sets the panel values it carries (so the engine's side effects run), leaves master tune, volume, voices and quality alone */
-static void load_user(p5_plugin_t *s, int n) {
-    if (n < 1 || n > s->nuser) return;
-    const p5_import_t *o = &s->imp[n - 1];
-    for (int i = 0; i < P5P_COUNT; i++) if (o->mask >> i & 1) p5_set(&s->e, i, o->v[i]);
-    s->user = n;
+/* a factory sheet, an imported patch (sets the panel values it carries so the engine's side effects run; master tune, volume,
+ * voices and quality stay) or, for a free slot, the neutral Init patch */
+static void load_slot(p5_plugin_t *s, int slot) {
+    if (slot < 0 || slot >= P5_SLOTS) return;
+    if (slot < nfactory()) p5_load_factory(&s->e, slot);
+    else {
+        const int u = slot - nfactory();
+        p5_import_t init, *o = u < s->nuser ? &s->imp[u] : (p5_import_init(&init), &init);
+        for (int i = 0; i < P5P_COUNT; i++) if (o->mask >> i & 1) p5_set(&s->e, i, o->v[i]);
+    }
+    s->preset = slot;
     s->display_rev++;
 }
 
@@ -158,7 +166,7 @@ static void p5_midi(void *h, const uint8_t *m, int len) {
     case 0xA0: p5_pressure(&s->e, d1, d2 / 127.0f); break;
     case 0xD0: p5_pressure(&s->e, -1, d1 / 127.0f); break;
     case 0xE0: p5_bend(&s->e, ((d1 | (d2 << 7)) - 8192) / 8192.0f); break;
-    case 0xC0: if (d1 < p5_factory_count()) load_preset(s, d1); else load_user(s, d1 - p5_factory_count() + 1); break;
+    case 0xC0: load_slot(s, d1); break;
     case 0xB0:
         if (d1 == 1) p5_wheel(&s->e, d2 / 127.0f);
         else if (d1 == 64) {
@@ -171,8 +179,8 @@ static void p5_midi(void *h, const uint8_t *m, int len) {
 
 static void p5_set_param(void *h, const char *k, const char *val) {
     p5_plugin_t *s = h;
-    if (!strcmp(k, "preset")) { load_preset(s, atoi(val)); return; }
-    if (!strcmp(k, "user")) { load_user(s, atoi(val)); return; }     /* 0 leaves the sound as it is */
+    if (!strcmp(k, "preset")) { load_slot(s, atoi(val)); return; }
+    if (!strcmp(k, "user")) { if (atoi(val) >= 1) load_slot(s, nfactory() + atoi(val) - 1); return; }   /* 0.2.0's knob; 0 left the sound as it was */
     if (!strcmp(k, "state")) {
         /* "P5A <preset> v0 v1 ... v<P5P_COUNT-1>" (each value 0..1) */
         const char *p = val;
@@ -191,8 +199,8 @@ static void p5_set_param(void *h, const char *k, const char *val) {
         while (*p == ' ') p++;
         if (*p == 'U') user = atoi(p + 1);
         for (int i = 0; i < got; i++) p5_set(&s->e, i, v[i]);
-        s->preset = pre >= 0 && pre < p5_factory_count() ? pre : 0;
-        s->user = user >= 0 && user <= s->nuser ? user : 0;
+        if (user > 0) pre = nfactory() + user - 1;       /* a 0.2.0 state: factory program + imported patch number */
+        s->preset = pre >= 0 && pre < P5_SLOTS ? pre : 0;
         s->display_rev++;
         return;
     }
@@ -204,18 +212,16 @@ static int p5_get_param(void *h, const char *k, char *b, int n) {
     p5_plugin_t *s = h;
     if (!strcmp(k, "display_rev")) return snprintf(b, (size_t)n, "%u", s->display_rev) + 1;
     if (!strcmp(k, "preset")) return snprintf(b, (size_t)n, "%d", s->preset) + 1;
-    if (!strcmp(k, "user")) return snprintf(b, (size_t)n, "%d", s->user) + 1;
-    if (!strcmp(k, "user_display"))
-        return snprintf(b, (size_t)n, "%s", s->user >= 1 && s->user <= s->nuser ? s->imp[s->user - 1].name : s->nuser ? "-" : "No files") + 1;
-    if (!strncmp(k, "preset:", 7)) {
-        int i = atoi(k + 7);
-        if (i < 0 || i >= p5_factory_count()) return 0;
-        return snprintf(b, (size_t)n, "%s", p5_factory_name(i)) + 1;
+    if (!strcmp(k, "user")) return snprintf(b, (size_t)n, "%d", s->preset >= nfactory() && s->preset - nfactory() < s->nuser ? s->preset - nfactory() + 1 : 0) + 1;
+    if (!strncmp(k, "preset:", 7)) return slot_name(s, atoi(k + 7), b, n);
+    if (!strcmp(k, "program_name")) return slot_name(s, s->preset, b, n);
+    if (!strcmp(k, "import_status")) {
+        if (!s->nuser) return snprintf(b, (size_t)n, "No imports. Put Repro-5 .h2p or .zip files in banks/, then reload the plugin.") + 1;
+        return snprintf(b, (size_t)n, "%d imported as U01-U%02d. New files in banks/ need a plugin reload.", s->nuser, s->nuser) + 1;
     }
     if (!strcmp(k, "state")) {
         int w = snprintf(b, (size_t)n, "P5A %d", s->preset);
         for (int i = 0; i < P5P_COUNT && w < n; i++) w += snprintf(b + w, (size_t)(n - w), " %.5g", s->e.p[i]);
-        if (s->user) w += snprintf(b + w, (size_t)(n - w), " U%d", s->user);
         return w < n ? w + 1 : 0;
     }
     int i = find(k);

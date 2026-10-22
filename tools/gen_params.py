@@ -64,9 +64,16 @@ def main():
             if kind == "pot":
                 del e["display"]
         out.append(e)
-    out.append({"key": "preset", "name": "Program", "options": names, "default": names[0]})
-    # appended 2026-10-22: imported Repro-5 patches from <plugin dir>/banks (src/p5_import.c); 0 = none, the plugin answers "user_display" with the name
+    # 0.3.0: "preset" is a slot 0..127 (= MIDI program number): the factory sheets, then imported Repro-5 patches (src/p5_import.c,
+    # <plugin dir>/banks), then Init. The plugin names each slot ("preset:<n>"), the MPC PRESET menu lists them all.
+    out.append({"key": "preset", "name": "Program", "min": 0, "max": 127, "default": 0, "display": "int", "refresh_display": True})
+    # appended 2026-10-22 (0.2.0): the old import knob; the plugin still reads it so saves made with it load
     out.append({"key": "user", "name": "Imported", "min": 0, "max": 128, "default": 0, "display": "int"})
+    # appended 0.3.0: text readouts for the Program page (polled; the plugin raises display_rev when a program loads)
+    out.append({"key": "program_name", "name": "Program name", "type": "readout", "display": "string"})
+    out.append({"key": "preset_prev", "name": "Program -", "momentary": True, "step_of": "preset", "step_delta": -1})
+    out.append({"key": "preset_next", "name": "Program +", "momentary": True, "step_of": "preset", "step_delta": 1})
+    out.append({"key": "import_status", "name": "Import status", "type": "readout", "display": "string"})
     here = os.path.join(HERE, "..")
     json.dump({"name": "Profit-5", "params": out}, open(os.path.join(here, "vst", "params.json"), "w"), indent=1)
     with open(os.path.join(here, "src", "plugin_keys.h"), "w") as f:
@@ -77,7 +84,7 @@ def main():
             lo, hi, opts = spec(kind)
             f.write("    { \"%s\", %g, %g, %d },\n" % (k, lo, hi, len(opts) if opts else 0))
         f.write("};\n_Static_assert(sizeof P5_KEYS / sizeof *P5_KEYS == P5P_COUNT, \"tools/gen_params.py and engine.h disagree\");\n")
-    print("%d params (+ preset, %d programs) -> vst/params.json, src/plugin_keys.h" % (NENGINE, len(names)))
+    print("%d params (+ preset, user, 2 readouts, 2 arrows; %d factory programs) -> vst/params.json, src/plugin_keys.h" % (NENGINE, len(names)))
 
 
 if __name__ == "__main__":

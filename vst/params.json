@@ -464,47 +464,11 @@
   {
    "key": "preset",
    "name": "Program",
-   "options": [
-    "1-1 Brass",
-    "1-2 Low Strings",
-    "1-3 Muted Clav",
-    "1-4 Percussive Electric Piano",
-    "1-5 Flutes",
-    "1-6 Harpsichord",
-    "1-7 Sync I",
-    "1-8 Percussive Organ",
-    "2-1 Unison Glide With Resonance",
-    "2-2 Harmonium",
-    "2-3 Organ With Resonance",
-    "2-4 Toy Piano",
-    "2-5 Trumpet/Flute",
-    "2-6 Filter Mod",
-    "2-7 Reed Organ",
-    "2-8 Brass In Fifths",
-    "3-1 Pipe Organ Flutes",
-    "3-2 Sync II",
-    "3-3 Electric Piano",
-    "3-4 High Strings",
-    "3-5 Octave Sawteeth",
-    "3-6 Release-Repeat",
-    "3-7 Delayed Harmonic",
-    "3-8 Echo-Repeat",
-    "4-1 Pulse-Width Mod",
-    "4-2 Slow Sync Sweep",
-    "4-3 Fourths With Resonance",
-    "4-4 Sweeping Harmonics",
-    "4-5 Slow Sync",
-    "4-6 Random Arpeggiator",
-    "4-7 Sawtooth Arpeggiator",
-    "4-8 Clangorous Bells",
-    "5-1 Alien",
-    "5-2 Noise Sweep",
-    "5-3 Descending Bells",
-    "5-4 Descending Pulse Wave Mod",
-    "5-5 Helicopter",
-    "5-6 Resonance Bells"
-   ],
-   "default": "1-1 Brass"
+   "min": 0,
+   "max": 127,
+   "default": 0,
+   "display": "int",
+   "refresh_display": true
   },
   {
    "key": "user",
@@ -513,6 +477,32 @@
    "max": 128,
    "default": 0,
    "display": "int"
+  },
+  {
+   "key": "program_name",
+   "name": "Program name",
+   "type": "readout",
+   "display": "string"
+  },
+  {
+   "key": "preset_prev",
+   "name": "Program -",
+   "momentary": true,
+   "step_of": "preset",
+   "step_delta": -1
+  },
+  {
+   "key": "preset_next",
+   "name": "Program +",
+   "momentary": true,
+   "step_of": "preset",
+   "step_delta": 1
+  },
+  {
+   "key": "import_status",
+   "name": "Import status",
+   "type": "readout",
+   "display": "string"
   }
  ]
 }

@@ -15,6 +15,7 @@ typedef struct {
 
 /* One patch from the text of a .h2p. Returns 1 for a Repro-5 patch with at least one recognised key, else 0 (another instrument, empty, binary). */
 int p5_import_h2p(const char *text, size_t len, p5_import_t *out);
+void p5_import_init(p5_import_t *out);          /* the neutral patch, named "Init" (an unused program slot) */
 
 /* Calls cb(entry name, data, len, user) for every file in a zip whose name ends in `suffix` (case-insensitive) and unpacks to at most scratch_cap bytes.
  * cb returns non-zero to stop. Returns the number of files delivered, or < 0 for a damaged / unsupported archive (encrypted, zip64). */

@@ -19,15 +19,18 @@ program names as published in the patch-sheet booklet; their knob settings were 
 
 ## Importing Repro-5 patches (0.2.0)
 Put u-he Repro-5 `.h2p` patch files, or `.zip` files of them, in the plugin's `banks` folder (`/sdcard/Synths/sd88me - VST - Profit-5/banks/`;
-the installer keeps it when you upgrade). The plugin reads them once when it loads, up to 128, sorted by file name, and the **IMPORTED** knob on
-the PROGRAM tab (also a Q-Link) picks one: its name shows under the knob, 0 leaves the sound as it is. MIDI program change 38 and up picks
-imported patch 1 and up. Loose files are only read in the banks folder itself (no sub-folders), a zip may contain folders. The patches are
-yours: none ships with the plugin.
+the installer keeps it when you upgrade). The plugin reads them once when it loads, so **reload the plugin after adding files**. They are sorted
+by file name and join the program list: slots 1-38 are the factory sheets, then `U01`-`U90` are the imported patches (named after the file), then
+free slots named `U.. Init`. The PRESET menu, the arrows on the PROGRAM tab (which show the name), the data wheel, a Q-Link and MIDI program change
+(0-127) all pick from the same list. A status line on the PROGRAM tab says how many were found. Loose files are only read in the banks folder
+itself (no sub-folders), a zip may contain folders. The patches are yours: none ships with the plugin.
 
 What carries over: oscillator pitch and shapes, pulse widths, sync, mix, the filter (cutoff, resonance, key tracking as off / half / full),
-both envelopes, glide, Poly-Mod, voice detune (as Vintage), and the filter tweak (it chooses Rev 2 or Rev 4, with the velocity depths in Rev 4).
-What does not: the LFO and the wheel section (reset to off), an inverted filter envelope (set to zero), anything Repro-5 has that this panel
-does not. The conversion is by dial position, so it sounds like the patch's idea of the sound, not a copy; it follows the same file format
+both envelopes, glide, Poly-Mod, voice detune (as Vintage), the LFO rate and shapes, and the "global mod" (wheel-mod source mix, destinations,
+and the lower limit as INIT AMT), and the filter tweak (it chooses Rev 2 or Rev 4, with the velocity depths in Rev 4).
+What does not: the wheel's upper limit (Profit-5's wheel always reaches full depth), the mod matrix, an inverted filter envelope (set to zero),
+anything Repro-5 has that this panel does not. The LFO rate is taken dial for dial, so its speed can differ. The conversion is by dial position,
+so it sounds like the patch's idea of the sound, not a copy; it follows the same file format
 reading as [TinyPro5](https://github.com/fleshinachair/TinyPro5) (MIT), whose DEFLATE and zip code it adapts. Master tune, volume, voices
 and quality stay as you set them. `.syx` dumps are not read yet.
 

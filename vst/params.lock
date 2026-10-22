@@ -58,3 +58,7 @@ lfo_init
 kbd_half
 preset
 user
+program_name
+preset_prev
+preset_next
+import_status

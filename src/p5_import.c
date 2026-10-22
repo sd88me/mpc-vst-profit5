@@ -283,7 +283,8 @@ enum {
     H_B_OCT, H_B_FREQ, H_B_FINE, H_B_SAW, H_B_TRI, H_B_RECT, H_B_PW, H_B_LOW, H_B_KPITCH,
     H_VMOD_B, H_VMOD_ENV, H_MIX_A, H_MIX_B, H_MIX_NOISE,
     H_FLT_CUT, H_FLT_RES, H_FLT_KEY, H_FLT_ENV, H_FLT_VMOD, H_FLT_POL, H_GLIDE,
-    H_FENV_VEL, H_AENV_VEL, H_FLT_CHIP, H_VDETUNE, H_COUNT
+    H_FENV_VEL, H_AENV_VEL, H_FLT_CHIP, H_VDETUNE,
+    H_LFO_FREQ, H_LFO_SQR, H_LFO_TRI, H_LFO_SAW, H_LFO_ISAW, H_GM_MIX, H_GM_LOW, H_A_GFM, H_A_GPWM, H_B_GFM, H_B_GPWM, H_FLT_GMOD, H_COUNT
 };
 
 static const struct { const char *sec, *key; int idx; } k_map[] = {
@@ -302,6 +303,10 @@ static const struct { const char *sec, *key; int idx; } k_map[] = {
     { "Glide", "Amt", H_GLIDE },
     { "FEnv", "VelDep", H_FENV_VEL }, { "AEnv", "VelDep", H_AENV_VEL },
     { "FltrIC", "Chip", H_FLT_CHIP }, { "VDetune", "Amount", H_VDETUNE },
+    { "LFO", "Freq", H_LFO_FREQ }, { "LFO", "Sqre", H_LFO_SQR }, { "LFO", "Triang", H_LFO_TRI }, { "LFO", "Saw", H_LFO_SAW },
+    { "LFO", "InvSaw", H_LFO_ISAW }, { "GMod", "SrcMix", H_GM_MIX }, { "GMod", "LowLim", H_GM_LOW },
+    { "OscA", "GModFM", H_A_GFM }, { "OscA", "GModPWM", H_A_GPWM }, { "OscB", "GModFM", H_B_GFM }, { "OscB", "GModPWM", H_B_GPWM },
+    { "Filter", "GMod", H_FLT_GMOD },
 };
 
 typedef struct { float v[H_COUNT]; uint8_t has[H_COUNT]; int n_keys; } h2p_t;
@@ -464,6 +469,22 @@ static void map_h2p(const h2p_t *h, p5_import_t *o)
     put(o, P5P_PM_DEST_PWA, ON(H_A_VPWM, 0.f) ? 1.f : 0.f);
     put(o, P5P_PM_DEST_FILT, ON(H_FLT_VMOD, 0.f) ? 1.f : 0.f);
 
+    /* LFO and wheel-mod. Repro-5's "global mod" is Profit-5's wheel-mod: a source mix (LFO .. noise), per-destination switches,
+     * and an amount that runs from LowLim (wheel down) to UppLim (wheel up). Profit-5's wheel always reaches full depth, so
+     * UppLim is not carried; LowLim becomes INIT AMT. The LFO rate is taken straight (0..100 -> the pot): the laws differ. The
+     * mod matrix (MM1/MM2) has no equivalent here. */
+    dial(h, H_LFO_FREQ, P5P_LFO_FREQ, o);
+    put(o, P5P_LFO_SAW, ON(H_LFO_SAW, 0.f) || ON(H_LFO_ISAW, 0.f) ? 1.f : 0.f);
+    put(o, P5P_LFO_TRI, ON(H_LFO_TRI, 0.f) ? 1.f : 0.f);
+    put(o, P5P_LFO_SQR, ON(H_LFO_SQR, 0.f) ? 1.f : 0.f);
+    dial(h, H_GM_MIX, P5P_WM_MIX, o);
+    if (h->has[H_GM_LOW]) put(o, P5P_LFO_INIT, h->v[H_GM_LOW] / 100.f);
+    put(o, P5P_WM_FA, ON(H_A_GFM, 0.f) ? 1.f : 0.f);
+    put(o, P5P_WM_FB, ON(H_B_GFM, 0.f) ? 1.f : 0.f);
+    put(o, P5P_WM_PWA, ON(H_A_GPWM, 0.f) ? 1.f : 0.f);
+    put(o, P5P_WM_PWB, ON(H_B_GPWM, 0.f) ? 1.f : 0.f);
+    put(o, P5P_WM_FILT, ON(H_FLT_GMOD, 0.f) ? 1.f : 0.f);
+
     /* voice detune is Profit-5's vintage (drift and tolerances); the velocity depths only exist in Rev 4 */
     if (h->has[H_VDETUNE]) put(o, P5P_VINTAGE, h->v[H_VDETUNE] / 100.f);
     if (rev4(h)) {
@@ -482,4 +503,14 @@ int p5_import_h2p(const char *text, size_t len, p5_import_t *out)
     if (!h2p_parse(text, len, &h)) return 0;
     map_h2p(&h, out);
     return 1;
+}
+
+/* the neutral patch (an empty file): what an unused program slot loads */
+void p5_import_init(p5_import_t *out)
+{
+    h2p_t h;
+    memset(out, 0, sizeof *out);
+    memset(&h, 0, sizeof h);
+    map_h2p(&h, out);
+    memcpy(out->name, "Init", 5);
 }

@@ -387,15 +387,8 @@ def tab_filter():
 def tab_program():
     t = Tab("PROGRAM", "PROGRAMMER")
     t.box(42, 26, 1238, 300, "PROGRAMMER")
-    t.display(150, 120, "11")
-    t.text(150, 160, "GROUP  BANK  PROG", 10)
-    t.knob("preset", 330, 128, r=34, label="PROGRAM", vs=16)
-    t.knob("user", 1150, 128, r=34, label="IMPORTED", vs=16, scale=False)                 # Repro-5 .h2p patches from the banks folder; the name is the value text
-    for i in range(8):                                                       # the program buttons, printed (not controls)
-        x = 540 + i * 70
-        t.text(x, 76, str(i + 1), 12)
-        t.hi.paste(Image.alpha_composite(Image.new("RGBA", (S(40), S(40)), FACE + (255,)), switch_sprite(40, i == 0, "grey")).convert("RGB"), (S(x - 20), S(100)))
-    t.bracket(520, 1060, 172, "PROGRAM SELECT  (PROGRAM KNOB OR MPC PRESET MENU)")
+    t.text(640, 70, "PROGRAM", 13)                                       # the name (a live stepper) and the import status (a live readout) are drawn by MPC
+    t.text(640, 232, "STEP WITH THE ARROWS, THE DATA WHEEL OR THE MPC PRESET MENU  (38 FACTORY SHEETS, THEN U01-U90 IMPORTED, THEN INIT)", 10, bold=False)
     t.box(42, 330, 640, 600, "VOICES")
     t.knob("voices", 150, 450, r=30, label="VOICES", scale=False)
     for i, n in enumerate("12345"):
@@ -407,11 +400,11 @@ def tab_program():
     t.box(670, 330, 1238, 600, "ABOUT")
     for i, s in enumerate(["Five voices, two VCOs, a 4-pole lowpass, Poly-Mod.", "REV 2: SSM-style VCOs, filter and envelopes, stepped knobs.",
                            "REV 4: CEM-style, smooth knobs, velocity and aftertouch.", "Programs: the 38 factory sheets, transcribed.",
-                           "IMPORTED: Repro-5 .h2p files (or zips) in the plugin's banks folder."]):
+                           "IMPORT: Repro-5 .h2p files or zips in the plugin's banks folder, then reload."]):
         t.text(700, 380 + i * 34, s, 12, anchor="lm", bold=False)
     if STYLE == "rev2":
         t.text(700, 380 + 5 * 34, "* not on the 1978 panel: INIT AMT, REV, HALF/FULL, VINTAGE, TOUCH.", 12, anchor="lm", bold=False)
-    t.qlinks = [("PROGRAM", ["preset", "user", "voices", "unison", "quality", "rev"])]
+    t.qlinks = [("PROGRAM", ["preset", "voices", "unison", "quality", "rev"])]
     return t
 
 
@@ -488,6 +481,9 @@ def build(root):
                 lines.append('toggle cx=%d cy=%d label="" key=%s img=art/%s_off.png img_on=art/%s_on.png w=%d h=%d ns=0'
                              % (c["cx"], c["cy"] + Y_OFF, k, name, name, w, w))
             seen.add(k)
+        if t.name == "PROGRAM":
+            lines.append('stepper w=1040 h=64 cx=640 cy=%d label="" key=preset get=program_name label_align=center' % (130 + Y_OFF))
+            lines.append('readout w=1040 h=38 cx=640 cy=%d label="" key=import_status label_align=center' % (190 + Y_OFF))
         for page, keys in t.qlinks:
             lines.append('qlinks "%s" = %s' % (page, ",".join(keys)))
         lines.append("")

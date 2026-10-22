@@ -51,7 +51,12 @@ int main(void) {
     /* Chip 3 (Poly) is the CEM voicing: Rev 4, with the velocity depths and voice detune as vintage */
     assert(V(o, P5P_REV) == 1.f && near(V(o, P5P_VEL_FILT), 0.7f) && near(V(o, P5P_VEL_AMP), 0.6f) && near(V(o, P5P_VINTAGE), 0.35f));
     /* wheel-mod and LFO are reset, and master tune, volume, voices, quality and aftertouch are not part of a patch */
-    assert(V(o, P5P_WM_FA) == 0.f && V(o, P5P_LFO_INIT) == 0.f && HAS(o, P5P_WM_FILT));
+    /* LFO and wheel-mod: rate, shapes (an inverted saw is a saw), source mix, INIT AMT from the lower limit, destinations */
+    assert(near(V(o, P5P_LFO_FREQ), 0.40f) && V(o, P5P_LFO_TRI) == 1.f && V(o, P5P_LFO_SAW) == 1.f && V(o, P5P_LFO_SQR) == 0.f);
+    assert(near(V(o, P5P_WM_MIX), 0.25f) && near(V(o, P5P_LFO_INIT), 0.12f));
+    assert(V(o, P5P_WM_FA) == 1.f && V(o, P5P_WM_FB) == 0.f && V(o, P5P_WM_PWA) == 0.f && V(o, P5P_WM_PWB) == 1.f && V(o, P5P_WM_FILT) == 1.f);
+    {   p5_import_t z; p5_import_init(&z);
+        assert(!strcmp(z.name, "Init") && V(z, P5P_LFO_INIT) == 0.f && V(z, P5P_CUTOFF) == 1.f && V(z, P5P_WM_FA) == 0.f); }
     assert(!HAS(o, P5P_TUNE) && !HAS(o, P5P_VOLUME) && !HAS(o, P5P_NVOICES) && !HAS(o, P5P_QUALITY) && !HAS(o, P5P_AT_FILT) && !HAS(o, P5P_AT_LFO));
     for (int i = 0; i < P5P_COUNT; i++) assert(V(o, i) >= 0.f && V(o, i) <= 1.f);
 
