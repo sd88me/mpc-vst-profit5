@@ -58,6 +58,9 @@ static void add_user(p5_plugin_t *s, const char *name, const uint8_t *data, size
 static const char *base_noext(const char *path, char *b, size_t n) {
     const char *f = strrchr(path, '/');
     f = f ? f + 1 : path;
+    int hex = 0;                                   /* an upload's "1a2b3c4d-" prefix is not part of the name */
+    while (hex < 8 && isxdigit((unsigned char)f[hex])) hex++;
+    if (hex == 8 && f[8] == '-' && f[9] && f[9] != '.') f += 9;
     snprintf(b, n, "%s", f);
     char *dot = strrchr(b, '.');
     if (dot && dot != b) *dot = 0;
@@ -216,8 +219,8 @@ static int p5_get_param(void *h, const char *k, char *b, int n) {
     if (!strncmp(k, "preset:", 7)) return slot_name(s, atoi(k + 7), b, n);
     if (!strcmp(k, "program_name")) return slot_name(s, s->preset, b, n);
     if (!strcmp(k, "import_status")) {
-        if (!s->nuser) return snprintf(b, (size_t)n, "No imports. Put Repro-5 .h2p or .zip files in banks/, then reload the plugin.") + 1;
-        return snprintf(b, (size_t)n, "%d imported as U01-U%02d. New files in banks/ need a plugin reload.", s->nuser, s->nuser) + 1;
+        if (!s->nuser) return snprintf(b, (size_t)n, "No files in banks/") + 1;
+        return snprintf(b, (size_t)n, "%d imported (U01-U%02d)", s->nuser, s->nuser) + 1;
     }
     if (!strcmp(k, "state")) {
         int w = snprintf(b, (size_t)n, "P5A %d", s->preset);

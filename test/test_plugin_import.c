@@ -35,6 +35,10 @@ int main(void) {
     void *h = E->create(dir);
     assert(h);
     char b[128];
+    {   char nb[40];
+        assert(!strcmp(base_noext("x/bd590f2d-Pete_Standing_2.h2p", nb, sizeof nb), "Pete_Standing_2"));
+        assert(!strcmp(base_noext("bd590f2d-.h2p", nb, sizeof nb), "bd590f2d-") && !strcmp(base_noext("Brass-1234.h2p", nb, sizeof nb), "Brass-1234"));
+        assert(!strcmp(base_noext("dir/abcdefgh-X.h2p", nb, sizeof nb), "abcdefgh-X")); }
     const int NF = p5_factory_count();
     /* the program list: factory sheets, then imported patches sorted by file name (bank.ZIP: Test Brass, Inverted Env; then "zz Brass"), then Init */
     assert(E->get_param(h, "preset:0", b, sizeof b) > 0 && !strcmp(b, p5_factory_name(0)));
@@ -94,7 +98,7 @@ int main(void) {
 
     /* no folder, an empty folder, an unreadable name: nothing found, "No files", and the plugin still plays */
     h = E->create("/nonexistent/banks");
-    assert(h && E->get_param(h, "import_status", b, sizeof b) > 0 && strstr(b, "No imports"));
+    assert(h && E->get_param(h, "import_status", b, sizeof b) > 0 && strstr(b, "No files"));
     E->set_param(h, "preset", "38");                                          /* an empty slot is Init */
     assert(getf(E, h, "preset") == 38 && E->get_param(h, "program_name", b, sizeof b) > 0 && !strcmp(b, "U01 Init"));
     static int16_t out[256];

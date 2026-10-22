@@ -387,8 +387,10 @@ def tab_filter():
 def tab_program():
     t = Tab("PROGRAM", "PROGRAMMER")
     t.box(42, 26, 1238, 300, "PROGRAMMER")
-    t.text(640, 70, "PROGRAM", 13)                                       # the name (a live stepper) and the import status (a live readout) are drawn by MPC
-    t.text(640, 232, "STEP WITH THE ARROWS, THE DATA WHEEL OR THE MPC PRESET MENU  (38 FACTORY SHEETS, THEN U01-U90 IMPORTED, THEN INIT)", 10, bold=False)
+    t.text(640, 56, "PROGRAM", 13)
+    t.text(640, 188, "IMPORT STATUS", 13)                                       # the name (a live stepper) and the import status (a live readout) are drawn by MPC
+    t.text(640, 266, "STEP WITH THE ARROWS, THE DATA WHEEL OR THE MPC PRESET MENU:  38 FACTORY SHEETS, THEN U01-U90 IMPORTED, THEN INIT.", 10, bold=False)
+    t.text(640, 284, "NEW FILES IN THE BANKS FOLDER NEED A PLUGIN RELOAD.", 10, bold=False)
     t.box(42, 330, 640, 600, "VOICES")
     t.knob("voices", 150, 450, r=30, label="VOICES", scale=False)
     for i, n in enumerate("12345"):
@@ -482,8 +484,8 @@ def build(root):
                              % (c["cx"], c["cy"] + Y_OFF, k, name, name, w, w))
             seen.add(k)
         if t.name == "PROGRAM":
-            lines.append('stepper w=1040 h=64 cx=640 cy=%d label="" key=preset get=program_name label_align=center' % (130 + Y_OFF))
-            lines.append('readout w=1040 h=38 cx=640 cy=%d label="" key=import_status label_align=center' % (190 + Y_OFF))
+            lines.append('stepper w=1040 h=64 cx=640 cy=%d label="" key=preset get=program_name label_align=center' % (112 + Y_OFF))
+            lines.append('readout w=1040 h=38 cx=640 cy=%d label="" key=import_status label_align=center' % (222 + Y_OFF))
         for page, keys in t.qlinks:
             lines.append('qlinks "%s" = %s' % (page, ",".join(keys)))
         lines.append("")
