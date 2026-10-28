@@ -42,7 +42,7 @@ int main(void) {
     assert(V(o, P5P_F_KBD) == 1.f && V(o, P5P_KBD_HALF) == 1.f);
     /* oscillators: A at the key (0 semitones), B an octave plus 7 plus half a semitone = 19.5 -> 19 on the pot, 0.5 on the fine pot */
     assert(near(V(o, P5P_A_FREQ), 0.f) && V(o, P5P_A_SAW) == 1.f && V(o, P5P_A_PULSE) == 0.f);
-    assert(near(V(o, P5P_B_FREQ), 19.f / 60.f) && near(V(o, P5P_B_FINE), 0.5f / 6.f));
+    assert(near(V(o, P5P_B_FREQ), 19.f / 60.f) && near(V(o, P5P_B_FINE), 0.5f));
     assert(V(o, P5P_B_SAW) == 1.f && V(o, P5P_B_TRI) == 0.f && V(o, P5P_B_PULSE) == 1.f && V(o, P5P_B_KBD) == 1.f && V(o, P5P_B_LO) == 0.f);
     assert(near(V(o, P5P_MIX_A), 0.8f) && near(V(o, P5P_MIX_B), 0.6f) && near(V(o, P5P_MIX_NOISE), 0.1f));
     /* poly-mod: sources, and the filter as its only destination */

@@ -443,12 +443,12 @@ static void map_h2p(const h2p_t *h, p5_import_t *o)
     dial(h, H_A_PW, P5P_A_PW, o);
     if (h->has[H_A_SYNC]) put(o, P5P_A_SYNC, ON(H_A_SYNC, 0.f) ? 1.f : 0.f);
 
-    /* oscillator B: whole semitones on the frequency pot plus the fine pot (0 .. +6 semitones) for the remainder */
+    /* oscillator B: whole semitones on the frequency pot plus the fine pot (0 .. +1 semitone) for the remainder */
     if (h->has[H_B_OCT] || h->has[H_B_FREQ] || h->has[H_B_FINE]) {
         const float t = clampf(12.f * (HV(H_B_OCT, 2.f) - 1.f) + HV(H_B_FREQ, 0.f) + HV(H_B_FINE, 0.f) / 100.f, 0.f, 60.f);
         const float whole = floorf(t);
         put(o, P5P_B_FREQ, whole / 60.f);
-        put(o, P5P_B_FINE, (t - whole) / 6.f);
+        put(o, P5P_B_FINE, (t - whole));
     }
     if (h->has[H_B_SAW] || h->has[H_B_TRI] || h->has[H_B_RECT]) {
         put(o, P5P_B_SAW, ON(H_B_SAW, 0.f) ? 1.f : 0.f);

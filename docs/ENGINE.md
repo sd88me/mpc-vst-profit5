@@ -33,7 +33,7 @@ The waveform's reset itself (3 us) is far shorter than a sample even at 96 kHz, 
 | Control | Law | Source |
 |---|---|---|
 | Osc frequency | 0..60 semitones, frequency 0 = C0 (16.35 Hz) on the lowest key (MIDI 36) | manual 3.3, 4.1-4.3; firmware |
-| Osc B fine | 0..+6 semitones: the fine CV enters the 100k osc B master summer through 2M (0.05 x 10 V = 0.5 V) | board 3 p3 (derived) |
+| Osc B fine | 0..+1 semitone (was 0..+6 derived from the 2M summer input; changed 2026-10-28 on a user report that the original spans about a semitone, offline) | user report |
 | Osc B LO FREQ | 7 octaves down (a 100k/100k divider switched into the summer; the scale is assumed) | board 3 p3 / assumed |
 | Pulse width | duty = pot: the 2030's PWM is 10 %/V, 100 % at 0 V to 0 % at 10 V (the engine's sense is reversed; it is the same range); silent at the ends. Pulse level 0.75 of the saw in Rev 2 (7.5 Vpp against 10 Vpp) | SSM 2030 datasheet |
 | Cutoff | 450 Hz at pot 6 on the lowest key with KBD on, 10.5 octaves over the pot; KBD = 1 V/oct | manual 3.4 (one point); span assumed |

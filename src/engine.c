@@ -208,7 +208,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     const float vint = e->p[P5P_VINTAGE];
     const float tune = (e->p[P5P_TUNE] - 0.5f) * 2 + e->bend * 2;           /* +-1 semitone tune, +-2 bend (assumption) */
     const float a_semis = semis_pot(e, P5P_A_FREQ), b_semis = semis_pot(e, P5P_B_FREQ);
-    const float b_fine = 6 * pot(e, P5P_B_FINE);                              /* 0..+6 semitones: 2M into the 100k osc B summer = 0.5 V (board 3 p3) */
+    const float b_fine = pot(e, P5P_B_FINE);                                  /* 0..+1 semitone (user report 2026-10-28: the original spans about a semitone) */
     const int a_saw = sw(e, P5P_A_SAW), a_pul = sw(e, P5P_A_PULSE), sync = sw(e, P5P_A_SYNC);
     const int b_saw = sw(e, P5P_B_SAW), b_tri = sw(e, P5P_B_TRI), b_pul = sw(e, P5P_B_PULSE), b_lo = sw(e, P5P_B_LO), b_kbd = sw(e, P5P_B_KBD);
     const int pm_fa = sw(e, P5P_PM_DEST_FA), pm_pw = sw(e, P5P_PM_DEST_PWA), pm_fi = sw(e, P5P_PM_DEST_FILT);

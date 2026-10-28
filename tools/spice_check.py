@@ -32,7 +32,7 @@ s = run('summer.cir')
 g = [float(x) for x in re.findall(r'^v\(o2\) = ([-+0-9.eE]+)', s, re.M)]
 t63 = meas(s, 't63')[0]
 check('summer: key / init input gain', '%.3f' % g[0], '1 (semitones 1:1)', abs(g[0] - 1) < 0.002)
-check('summer: fine input gain', '%.4f' % g[1], '0.05 (b_fine 6 semitones)', abs(g[1] - 0.05) < 0.0005)
+check('summer: fine input gain', '%.4f' % g[1], '0.05 (summer input, scan-derived; b_fine now 1 semitone)', abs(g[1] - 0.05) < 0.0005)
 check('summer: 412k / 182k / 2.21M input gains', '%.3f / %.3f / %.4f' % (g[2], g[3], g[4]), 'not used yet', True,
       'sources not legible on the scan')
 check('summer: output smoothing (ms)', '%.2f' % (t63 * 1e3), '2 (ma_cv RC)', 0.5 < t63 * 1e3 < 3, 'the engine lumps it with the S&H RC')
