@@ -1,0 +1,16 @@
+{
+  "name": "Profit-5",
+  "manufacturer": "sd88me",
+  "version": "2.0.0",
+  "kind": "instrument",
+  "uid": "Pft5",
+  "numInputs": 0,
+  "numOutputs": 2,
+  "category": "Synth",
+  "file32": "VST/profit5-arm32.so",
+  "file64": "VST/profit5-arm64.so",
+  "description": "Five-voice analog polysynth modelled on a classic 1978 instrument (SSM revisions). Imports Repro-5 .h2p patches from banks/.",
+  "author": "sd88me",
+  "url": "https://github.com/sd88me/mpc-vst-profit5",
+  "license": "MIT"
+}
