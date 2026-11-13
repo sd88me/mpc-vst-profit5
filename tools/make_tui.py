@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Profit-5's native MPC skin: skins/TUI.json + skins/Q-Links.json + the PNGs they use (docs/SDK-PORTING.md, after Welle's layout_tab).
+"""Profit-5's native MPC skin: skins/TUI.json + skins/Q-Links.json + the PNGs they use (after Welle's layout_tab).
 
 The pages are the 0.2.1 skin's own art (vst/art/, drawn by skin/make_skin.py: panel pages, 128-frame knob strips, on/off switch caps)
 with live widgets at the positions vst/layout.conf gives them (layout y = screen y + 86). Three tabs as before; Q-Links in blocks of
@@ -407,7 +407,7 @@ def render_preview(p, bgname, rects_by_sub):
                 txt = "Lead 2_" if key == "fav_name" else p.sample.get(key, "")
                 left = "left" in k["componentData"]["data"].get("textStyle", {}).get("justification", "")
                 d.text((x if left else x + w / 2, y + h / 2), txt, font=font(22 if typ == "Label" else 30), fill=(234, 234, 228), anchor="lm" if left else "mm")
-        for r in rects:
+        for r in ([] if os.environ.get("P5_PREVIEW_CLEAN") else rects):   # P5_PREVIEW_CLEAN=1: no Q-Link frames (README pictures)
             d.rectangle(r, outline=(255, 46, 38), width=2)
         outs.append((subname, img))
     return outs
