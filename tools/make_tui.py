@@ -233,13 +233,13 @@ def parse_layout():
 # Q-Link groups per tab: (sub-tab name, [keys of each group]); a group is at most four controls, a sub-tab at most four groups
 QLINKS = {
     "OSCILLATORS": [
-        ("OSC KNOBS", [["pm_fenv", "pm_oscb", "a_freq", "a_pw"], ["lfo_init", "lfo_freq", "b_freq", "b_fine"], ["b_pw"], ["wm_mix", "glide"]]),
+        ("OSC KNOBS", [["pm_fenv", "pm_oscb", "a_freq", "a_pw"], ["lfo_init", "lfo_freq", "b_freq", "b_fine"], ["b_pw"], ["wm_mix", "mix_a", "mix_b", "mix_noise"]]),
         ("OSC SWITCHES", [["pm_freq_a", "pm_pw_a", "pm_filter"], ["a_saw", "a_pulse", "a_sync"], ["lfo_saw", "lfo_tri", "lfo_square"],
                           ["b_saw", "b_tri", "b_pulse"]]),
-        ("MOD SWITCHES", [["b_lo", "b_kbd"], ["wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b"], ["wm_filter"], ["unison"]]),
+        ("MOD SWITCHES", [["b_lo", "b_kbd"], ["wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b"], ["wm_filter"]]),
     ],
     "FILTER AMP": [
-        ("FILTER AMP", [["mix_a", "mix_b", "mix_noise"], ["cutoff", "reso", "env_amt"], ["f_attack", "f_decay", "f_sustain", "f_release"],
+        ("FILTER AMP", [["glide", "unison"], ["cutoff", "reso", "env_amt"], ["f_attack", "f_decay", "f_sustain", "f_release"],
                         ["a_attack", "a_decay", "a_sustain", "a_release"]]),
         ("TOUCH SWITCHES", [["rev", "kbd_half", "f_kbd"], ["vintage", "tune", "volume"], ["vel_filter", "vel_amp", "at_filter", "at_lfo"], ["release"]]),
     ],

@@ -339,27 +339,28 @@ def tab_osc():
     t.bracket(744, 912, 383, "SHAPE")
     t.knob("b_pw", 1000, 305, r=30, label="PULSE WIDTH")
     t.switch("b_lo", 1114, 301, label="LO FREQ"); t.switch("b_kbd", 1184, 301, label="KEYBOARD")
-    # row 3: WHEEL-MOD, glide, unison
+    # row 3: WHEEL-MOD, MIXER
     t.box(42, 420, 424, 600, "WHEEL-MOD")
     t.knob("wm_mix", 104, 502, label=None, hide_value=True)
     t.text(70, 560, "LFO", 9.5); t.text(140, 560, "NOISE", 9.5); t.text(104, 578, "SOURCE MIX", 10)
     for k, x, s in (("wm_freq_a", 182, "FREQ A"), ("wm_freq_b", 232, "FREQ B"), ("wm_pw_a", 282, "PW A"), ("wm_pw_b", 332, "PW B"), ("wm_filter", 382, "FILTER")):
         t.switch(k, x, 498, w=30, above=s)
     t.bracket(162, 402, 580, "DESTINATION")
-    t.knob("glide", 548, 502, r=30, label="GLIDE RATE")
-    t.switch("unison", 680, 498, label="UNISON")
+    t.box(452, 420, 900, 600, "MIXER")
+    for k, x, s in (("mix_a", 548, "OSC A"), ("mix_b", 676, "OSC B"), ("mix_noise", 804, "NOISE")):
+        t.knob(k, x, 502, r=30, label=s)
     t.plaque(1105, 558, "profit~5")
-    t.qlinks = [("OSC KNOBS", ["pm_fenv", "pm_oscb", "a_freq", "a_pw", "lfo_init", "lfo_freq", "b_freq", "b_fine", "b_pw", "wm_mix", "glide"]),
+    t.qlinks = [("OSC KNOBS", ["pm_fenv", "pm_oscb", "a_freq", "a_pw", "lfo_init", "lfo_freq", "b_freq", "b_fine", "b_pw", "wm_mix", "mix_a", "mix_b", "mix_noise"]),
                 ("MOD SWITCHES", ["pm_freq_a", "pm_pw_a", "pm_filter", "lfo_saw", "lfo_tri", "lfo_square", "wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b", "wm_filter"]),
-                ("OSC SWITCHES", ["a_saw", "a_pulse", "a_sync", "b_saw", "b_tri", "b_pulse", "b_lo", "b_kbd", "unison"])]
+                ("OSC SWITCHES", ["a_saw", "a_pulse", "a_sync", "b_saw", "b_tri", "b_pulse", "b_lo", "b_kbd"])]
     return t
 
 
 def tab_filter():
     t = Tab("FILTER", "FILTER AMP")
-    t.box(42, 26, 410, 205, "MIXER")
-    for k, x, s in (("mix_a", 104, "OSC A"), ("mix_b", 226, "OSC B"), ("mix_noise", 348, "NOISE")):
-        t.knob(k, x, 108, r=30, label=s)
+    t.box(42, 26, 410, 205, "GLIDE / UNISON")
+    t.knob("glide", 140, 108, r=30, label="GLIDE RATE")
+    t.switch("unison", 312, 104, label="UNISON")
     t.box(436, 26, 1238, 402, "FILTER")
     t.switch("rev", 500, 104, above="1/2    3", label="REV")
     t.knob("cutoff", 634, 108, r=30, label="CUTOFF"); t.knob("reso", 776, 108, r=30, label="RESONANCE")
@@ -378,7 +379,7 @@ def tab_filter():
     for k, x, s in (("a_attack", 634, "ATTACK"), ("a_decay", 776, "DECAY"), ("a_sustain", 918, "SUSTAIN"), ("a_release", 1060, "RELEASE")):
         t.knob(k, x, 502, r=30, label=s)
     t.switch("release", 1170, 498, label="RELEASE")
-    t.qlinks = [("FILTER", ["mix_a", "mix_b", "mix_noise", "cutoff", "reso", "env_amt", "f_attack", "f_decay", "f_sustain", "f_release"]),
+    t.qlinks = [("FILTER", ["glide", "unison", "cutoff", "reso", "env_amt", "f_attack", "f_decay", "f_sustain", "f_release"]),
                 ("AMP", ["a_attack", "a_decay", "a_sustain", "a_release", "vintage", "tune", "volume", "vel_filter", "vel_amp", "at_filter", "at_lfo"]),
                 ("FILTER SWITCHES", ["rev", "f_kbd", "kbd_half", "release"])]
     return t
