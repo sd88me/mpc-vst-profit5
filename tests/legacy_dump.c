@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     const mpc_engine_t *e = mpc_engine();
     void *s = e->create(argc > 1 ? argv[1] : ".");
     if (argc > 2) e->set_param(s, "preset", argv[2]);
-    e->set_param(s, "cutoff", "37");
+    e->set_param(s, "cutoff", "3.7");
     e->set_param(s, "reso", "6");
     e->set_param(s, "a_release", "8");
     e->set_param(s, "a_sync", "1");
