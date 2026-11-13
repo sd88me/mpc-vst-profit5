@@ -1,4 +1,6 @@
 [ { "version": "0.1.0", "device": "Akai Force (Gen1)", "firmware": "5.0.17", "date": "2026-10-21" },
   { "version": "0.1.1", "device": "Akai Force (Gen1)", "firmware": "5.0.17", "date": "2026-10-22" },
   { "version": "0.2.0", "device": "Akai Force (Gen1)", "firmware": "5.0.17", "date": "2026-10-22" },
-  { "version": "0.2.1", "device": "Akai MPC Live III (Gen2)", "firmware": "3.10", "date": "2026-10-28" } ]
+  { "version": "0.2.1", "device": "Akai MPC Live III (Gen2)", "firmware": "3.10", "date": "2026-10-28" },
+  { "version": "2.0.0", "device": "Akai MPC Live III (Gen2)", "firmware": "3.10", "date": "2026-11-13",
+    "note": "All pages, Q-Links, programs, the data wheel, favourites and naming, sound; checked on the beta build (same code, its own name and uid). The release build is installed on the same unit." } ]
