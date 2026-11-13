@@ -9,3 +9,4 @@ vst/build/
 vst/preview/
 skin/__pycache__/
 __pycache__/
+dist/

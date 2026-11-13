@@ -64,4 +64,8 @@ static const p5_key_t P5_KEYS[58] = {
     { "lfo_init", 0, 10, 0 },
     { "kbd_half", 0, 1, 2 },
 };
+#ifdef __cplusplus
+static_assert(sizeof P5_KEYS / sizeof *P5_KEYS == P5P_COUNT, "tools/gen_params.py and engine.h disagree");
+#else
 _Static_assert(sizeof P5_KEYS / sizeof *P5_KEYS == P5P_COUNT, "tools/gen_params.py and engine.h disagree");
+#endif

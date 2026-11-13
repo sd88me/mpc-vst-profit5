@@ -14,7 +14,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/stat.h>
-#include "engine.h"      /* mpc-vst-plugins wrapper/engine.h (mpc_engine_t) */
+#include "engine.h"      /* mpc_engine_t: src/engine.h, vendored from mpc-vst-plugins wrapper/engine.h */
 #include "p5_engine.h"
 #include "p5_import.h"
 #include "plugin_keys.h"
@@ -68,7 +68,7 @@ static const char *base_noext(const char *path, char *b, size_t n) {
 }
 static int zip_entry(const char *name, const uint8_t *data, size_t len, void *user) {
     char b[28];
-    add_user(user, base_noext(name, b, sizeof b), data, len);
+    add_user((p5_plugin_t *)user, base_noext(name, b, sizeof b), data, len);
     return ((p5_plugin_t *)user)->nuser >= MAX_USER;
 }
 static int has_ext(const char *f, const char *ext) {
@@ -81,7 +81,7 @@ static uint8_t *slurp(const char *path, size_t max, size_t *len) {
     if (lstat(path, &st) || !S_ISREG(st.st_mode) || st.st_size <= 0 || (size_t)st.st_size > max) return NULL;   /* regular files only: no symlinks */
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
-    uint8_t *d = malloc((size_t)st.st_size);
+    uint8_t *d = (uint8_t *)malloc((size_t)st.st_size);
     if (d && fread(d, 1, (size_t)st.st_size, f) != (size_t)st.st_size) { free(d); d = NULL; }
     fclose(f);
     if (d) *len = (size_t)st.st_size;
@@ -95,7 +95,7 @@ static void scan_banks(p5_plugin_t *s, const char *dir) {
     for (struct dirent *e; (e = readdir(d));) {
         if (e->d_name[0] == '.' || !(has_ext(e->d_name, ".h2p") || has_ext(e->d_name, ".zip"))) continue;
         if (n == cap) {
-            char **t = realloc(names, (size_t)(cap = cap ? cap * 2 : 64) * sizeof *names);
+            char **t = (char **)realloc(names, (size_t)(cap = cap ? cap * 2 : 64) * sizeof *names);
             if (!t) break;
             names = t;
         }
@@ -111,7 +111,7 @@ static void scan_banks(p5_plugin_t *s, const char *dir) {
             uint8_t *data = slurp(path, MAX_H2P, &len);
             if (data) { char b[28]; add_user(s, base_noext(names[i], b, sizeof b), data, len); free(data); }
         } else {
-            uint8_t *data = slurp(path, MAX_ZIP, &len), *scratch = data ? malloc(MAX_H2P) : NULL;
+            uint8_t *data = slurp(path, MAX_ZIP, &len), *scratch = data ? (uint8_t *)malloc(MAX_H2P) : NULL;
             if (scratch) p5_zip_walk(data, len, ".h2p", scratch, MAX_H2P, zip_entry, s);
             free(scratch);
             free(data);
@@ -122,15 +122,15 @@ static void scan_banks(p5_plugin_t *s, const char *dir) {
 }
 
 static void *p5_create(const char *dir) {
-    p5_plugin_t *s = calloc(1, sizeof *s);
+    p5_plugin_t *s = (p5_plugin_t *)calloc(1, sizeof *s);
     if (!s) return NULL;
-    s->imp = calloc(MAX_USER, sizeof *s->imp);
+    s->imp = (p5_import_t *)calloc(MAX_USER, sizeof *s->imp);
     p5_init(&s->e, FS);
     if (s->imp) scan_banks(s, dir);
     return s;
 }
 static void p5_destroy(void *h) {
-    p5_plugin_t *s = h;
+    p5_plugin_t *s = (p5_plugin_t *)h;
     if (s) free(s->imp);
     free(s);
 }
@@ -160,7 +160,7 @@ static void load_slot(p5_plugin_t *s, int slot) {
 }
 
 static void p5_midi(void *h, const uint8_t *m, int len) {
-    p5_plugin_t *s = h;
+    p5_plugin_t *s = (p5_plugin_t *)h;
     if (len < 1) return;
     int st = m[0] & 0xF0, d1 = len > 1 ? m[1] & 127 : 0, d2 = len > 2 ? m[2] & 127 : 0;
     switch (st) {
@@ -181,7 +181,7 @@ static void p5_midi(void *h, const uint8_t *m, int len) {
 }
 
 static void p5_set_param(void *h, const char *k, const char *val) {
-    p5_plugin_t *s = h;
+    p5_plugin_t *s = (p5_plugin_t *)h;
     if (!strcmp(k, "preset")) { load_slot(s, atoi(val)); return; }
     if (!strcmp(k, "user")) { if (atoi(val) >= 1) load_slot(s, nfactory() + atoi(val) - 1); return; }   /* 0.2.0's knob; 0 left the sound as it was */
     if (!strcmp(k, "state")) {
@@ -212,7 +212,7 @@ static void p5_set_param(void *h, const char *k, const char *val) {
 }
 
 static int p5_get_param(void *h, const char *k, char *b, int n) {
-    p5_plugin_t *s = h;
+    p5_plugin_t *s = (p5_plugin_t *)h;
     if (!strcmp(k, "display_rev")) return snprintf(b, (size_t)n, "%u", s->display_rev) + 1;
     if (!strcmp(k, "preset")) return snprintf(b, (size_t)n, "%d", s->preset) + 1;
     if (!strcmp(k, "user")) return snprintf(b, (size_t)n, "%d", s->preset >= nfactory() && s->preset - nfactory() < s->nuser ? s->preset - nfactory() + 1 : 0) + 1;
@@ -235,7 +235,7 @@ static int p5_get_param(void *h, const char *k, char *b, int n) {
 }
 
 static void p5_render_block(void *h, int16_t *out, int frames) {
-    p5_plugin_t *s = h;
+    p5_plugin_t *s = (p5_plugin_t *)h;
     for (int f = 0; f < frames; f += BLOCK) {
         int m = frames - f < BLOCK ? frames - f : BLOCK;
         p5_render(&s->e, s->buf, m);

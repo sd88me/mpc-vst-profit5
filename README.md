@@ -6,23 +6,37 @@ a four-pole resonant lowpass, Poly-Mod, a wheel-mod section with LFO and noise, 
 1978 patch sheets. One switch changes the whole voicing between **Rev 2** (SSM chips, stepped controls) and **Rev 4** (CEM-style,
 smooth controls, velocity and aftertouch).
 
-![The Oscillators tab, Rev 2 look](docs/img/skin-rev2-osc.png)
+![Profit-5 on an MPC: the Oscillators page](docs/img/screenshot-osc.png)
 
-**Status: version 0.1.0, a test build.** It builds, passes the offline host test and its own engine, preset and circuit tests, and it loads, plays and
-shows its skin on a Force (2026-10-21, device). CPU on a Force (Gen1, `bench.sh`, 2026-10-21): about 28 % of one core at five voices, p99 31 %, a
-**WARN**: use a few instances, not a dozen. It has not been tried on other models, and many of the knob response
-laws are still measured guesses (see "What is measured, and what isn't"). Expect to hear the character, not a calibrated copy.
+| | |
+|---|---|
+| ![Filter and amplifier](docs/img/screenshot-filter.png) | ![Programmer: programs, imports and favourites](docs/img/screenshot-program.png) |
+
+## New in 2.0
+- **Native MPC screen:** the three panel pages (Oscillators, Filter Amp, Programmer), redrawn with the mixer next to the oscillators and Glide and Unison
+  on the filter page. Knobs, switches and LEDs are live on the panel.
+- **Q-Links on every page:** six sub-tabs in groups of four that follow the panel rows; press a tab key again for its next sub-tab.
+- **Favourites:** `+FAV` names and stores the current sound on an on-screen keyboard; it appears in the MPC's PRESET menu after the programs as
+  `F01 <name>` and is kept in `profit5-favourites.dat`, shared by every project. `-FAV` deletes the one that is picked.
+- **Programmer page:** the program name takes the data wheel and a Q-Link, with step keys either side.
+- One zip carries the 32-bit (Force) and 64-bit builds. Projects saved with 0.1.x and 0.2.x load with their sound, and imported Repro-5 patches stay where they were.
+
+**Status: 2.0.0.** Tested on a Live III (all pages, Q-Links, programs, favourites and naming, sound). Not yet tested: the Force with this version, a real
+project saved with 0.2.1 (old project data is covered by the offline tests), and saving and reloading a 2.0 project on the device. Many knob response
+laws are still measured guesses (see "What is measured, and what isn't"): expect the character, not a calibrated copy.
+
+![Naming a favourite](docs/img/screenshot-keyboard.png)
 
 *Profit-5 is an independent project, not affiliated with or endorsed by Sequential or Dave Smith Instruments. It contains no firmware,
 ROM image, manual, schematic, patch-sheet scan or photograph: everything in it is code and generated art. The patch names are the factory
 program names as published in the patch-sheet booklet; their knob settings were read by hand.*
 
-## Importing Repro-5 patches (0.2.0)
-Put u-he Repro-5 `.h2p` patch files, or `.zip` files of them, in the plugin's `banks` folder (`/sdcard/Synths/sd88me - VST - Profit-5/banks/`;
-the installer keeps it when you upgrade). The plugin reads them once when it loads, so **reload the plugin after adding files**. They are sorted
+## Importing Repro-5 patches
+Put u-he Repro-5 `.h2p` patch files, or `.zip` files of them, in the `banks` folder inside the plugin's folder (the installer keeps it when you
+upgrade). The plugin reads them once when it loads, so **reload the plugin after adding files**. They are sorted
 by file name and join the program list: slots 1-38 are the factory sheets, then `U01`-`U90` are the imported patches (named after the file), then
-free slots named `U.. Init`. The PRESET menu, the arrows on the PROGRAM tab (which show the name), the data wheel, a Q-Link and MIDI program change
-(0-127) all pick from the same list. A status line on the PROGRAM tab says how many were found. Loose files are only read in the banks folder
+free slots named `U.. Init`, then your favourites. The PRESET menu, the step keys and data wheel on the Programmer page, a Q-Link and MIDI program change
+(0-127) all pick from the same list. The Programmer page says how many were found. Loose files are only read in the banks folder
 itself (no sub-folders), a zip may contain folders. The patches are yours: none ships with the plugin.
 
 What carries over: oscillator pitch and shapes, pulse widths, sync, mix, the filter (cutoff, resonance, key tracking as off / half / full),
@@ -36,14 +50,13 @@ and quality stay as you set them. `.syx` dumps are not read yet.
 
 ## Install
 
-Requires a **modded MPC OS standalone device with root shell (SSH) access**; stock MPC OS doesn't allow installing plugins this way, and doing so is
-unofficial: back up first and use at your own risk. MPC OS 3.x (the skin format).
+- **Plugin Manager:** install or update **Profit-5** from the catalog in the Open MPC Plugin Manager.
+- **By hand** (a modded MPC OS device with SSH access; unofficial, back up first and use at your own risk): download the zip for your device from the
+  [releases](https://github.com/sd88me/mpc-vst-profit5/releases), `-mpc-armv7.zip` for the Force and 32-bit MPCs or `-mpc-aarch64.zip` for 64-bit MPCs
+  such as the Live III. Unzip it, copy the folder to the device (`scp -r Profit-5-2.0.0 root@<device-ip>:/tmp/`) and run
+  `ssh root@<device-ip> sh /tmp/Profit-5-2.0.0/install.sh`. Save your project first: the installer stops and restarts MPC. `INSTALL.txt` in the zip has the details.
 
-1. Download the zip for your device from the [releases](https://github.com/sd88me/mpc-vst-profit5/releases): `-mpc-armv7.zip` for Gen1
-   (Force, MPC Live / One / X / Key) and `-mpc-aarch64.zip` for Gen2 (**Gen2 is untested**).
-2. Unzip, copy the folder to the device (`scp -r Profit-5-0.1.0 root@<device-ip>:/tmp/`) and run `ssh root@<device-ip> sh /tmp/Profit-5-0.1.0/install.sh`.
-   Save your project first: the installer stops MPC, copies the plugin into `/sdcard/Synths`, backs up `MPC.settings`, adds the plugin to the list and restarts MPC.
-3. Add **Profit-5** to a track from the instrument plugin browser. `INSTALL.md` in the zip has the manual steps too.
+Then add **Profit-5** to a track from the plugin browser. Upgrading keeps your `banks` folder and favourites; old projects keep their sound.
 
 ## What you get
 
@@ -56,7 +69,7 @@ unofficial: back up first and use at your own risk. MPC OS 3.x (the skin format)
 - **Filter and amplifier:** cutoff, resonance, envelope amount, keyboard tracking, and a four-stage ADSR for each.
 - **Glide** and **master tune**, pitch bend, mod wheel, sustain pedal and program change.
 - **38 factory programs** (banks 1-4 and 5-1 to 5-6 of the original set), in MPC's PRESET menu and on the Program knob.
-- **Three screen tabs** with real-panel layout, printed 0-10 scales and 128-step knob pictures, and seven Q-Link pages.
+- **Three screen pages** with real-panel layout, printed 0-10 scales and 128-step knob pictures, six Q-Link sub-tabs, and favourites in the PRESET menu.
 
 ### Rev 2 and Rev 4
 
@@ -115,7 +128,7 @@ Honest status, offline on x86 (2026-10-21):
 - **Still guessed:** the start of the envelope and LFO ranges, the cutoff span, resonance law, Poly-Mod and Wheel-Mod depths, and a few summing-amp inputs the
   scan doesn't show. Rev 4 is modelled from public descriptions, not from a unit or its schematics.
 - **Known quiet program:** 5-5 Helicopter barely sounds in a short test (its amplifier attack is about 14 s under the datasheet law). To check against a recording.
-- **Not done:** device test and bench, a cassette-dump and `.syx` importer, a second output. A recording of a real unit would let me fit most of the guessed laws.
+- **Not done:** a cassette-dump and `.syx` importer, a second output. A recording of a real unit would let me fit most of the guessed laws.
 
 What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written up, with the evidence, in [`docs/ENGINE.md`](docs/ENGINE.md), [`docs/FIRMWARE.md`](docs/FIRMWARE.md) and
 [`docs/PRESETS.md`](docs/PRESETS.md).
@@ -124,13 +137,18 @@ What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written u
 
 | Tab | Contents |
 |---|---|
-| **Oscillators** | Poly-Mod (filter envelope, osc 2, three destinations), LFO (initial amount, frequency, three shapes), Wheel-Mod (source mix, five destinations), oscillator 1 and 2, glide, unison |
-| **Filter Amp** | Mixer, filter (cutoff, resonance, envelope amount, keyboard tracking, half/full, ADSR), amplifier ADSR and release, vintage, master tune, volume, velocity and aftertouch depths |
-| **Programmer** | Program knob and display, voices, unison, quality, rev |
+| **Oscillators** | Poly-Mod (filter envelope, osc 2, three destinations), LFO (initial amount, frequency, three shapes), Wheel-Mod (source mix, five destinations), oscillator 1 and 2, mixer |
+| **Filter Amp** | Glide and unison, filter (cutoff, resonance, envelope amount, keyboard tracking, half/full, ADSR), amplifier ADSR and release, vintage, master tune, volume, velocity and aftertouch depths |
+| **Programmer** | Program name with step keys and the data wheel, imported-patch count, +FAV / -FAV with the naming keyboard, voices, unison, quality, rev |
 
 MIDI: notes with velocity, polyphonic and channel aftertouch, pitch bend (two semitones), CC 1 mod wheel, CC 64 sustain, CC 120 / 123 all off, program change.
 
 ## Build from source
+
+`./build.sh` builds the plugin for the Force (32-bit) and 64-bit MPCs with the MPC plugin builder (`MPC_BUILDER` = its checkout); `./build.sh test` also
+runs the offline host test (`tests/run.sh`: every parameter kind, programs, favourites, a state round trip, projects saved with 0.1.1, 0.2.0 and 0.2.1)
+and the builder's host simulator; `tools/package_catalog.sh` makes the release zips. The screen is `tools/make_tui.py` (`--preview` draws each page).
+The engine and the older builds:
 
 ```
 python3 tools/gen_presets.py && python3 tools/gen_params.py          # src/presets_factory.h, vst/params.json, src/plugin_keys.h
@@ -140,8 +158,7 @@ gcc -O2 -Wall -Wextra -Werror -fsanitize=address,undefined test/test_kernels.c -
 gcc -O1 -Wall -Wextra -Werror -std=c11 -fsanitize=address,undefined test/test_import.c src/p5_import.c -lm && ./a.out                    # .h2p import
 gcc -O1 -std=gnu11 -fsanitize=address,undefined -Isrc -Ianalog -I../mpc-vst-plugins/wrapper test/test_plugin_import.c src/engine.c src/p5_import.c -lm && ./a.out
 python3 tools/spice_check.py                                          # needs ngspice
-../mpc-vst-plugins/tools/test_port.sh vst/vst.json                    # the wrapper's offline host test
-vst/build.sh                                                          # the device build (Docker), or run the "Release (draft)" workflow
+../mpc-vst-plugins/tools/test_port.sh vst/vst.json                    # the 0.x build's offline host test
 ```
 
 Listen offline: `gcc -O2 -std=c11 tools/render_wav.c src/engine.c -lm -o render_wav && ./render_wav 0 2 brass.wav`.
@@ -149,7 +166,7 @@ Listen offline: `gcc -O2 -std=c11 tools/render_wav.c src/engine.c -lm -o render_
 ## Credits and licence
 
 MIT, see `LICENSE`. The analog kernels (`analog/mpc_analog.h`) are shared with the other mpc-vst-plugins ports and written from the published papers
-(Valimaki and Huovilainen, Zavalishin); the SSM kernels in `analog/mpc_analog_p5.h` are new. The skin's lettering is GNU FreeSans. Built on
+(Valimaki and Huovilainen, Zavalishin); the SSM kernels in `analog/mpc_analog_p5.h` are new. The skin's lettering is GNU FreeSans (Liberation Sans, SIL OFL, where FreeSans is not installed). Built on
 [mpc-vst-plugins](https://github.com/sd88me/mpc-vst-plugins), whose wrapper, skin renderer and release tools do the rest. The Minimoog model
 [CA-72](https://github.com/idlefoundry/ca-72) is GPL and none of its code is used here; its method of checking a real-time model against a SPICE simulation
 inspired `circuits/`.

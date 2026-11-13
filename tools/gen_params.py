@@ -83,7 +83,7 @@ def main():
         for k, name, kind in P:
             lo, hi, opts = spec(kind)
             f.write("    { \"%s\", %g, %g, %d },\n" % (k, lo, hi, len(opts) if opts else 0))
-        f.write("};\n_Static_assert(sizeof P5_KEYS / sizeof *P5_KEYS == P5P_COUNT, \"tools/gen_params.py and engine.h disagree\");\n")
+        f.write("};\n#ifdef __cplusplus\nstatic_assert(sizeof P5_KEYS / sizeof *P5_KEYS == P5P_COUNT, \"tools/gen_params.py and engine.h disagree\");\n#else\n_Static_assert(sizeof P5_KEYS / sizeof *P5_KEYS == P5P_COUNT, \"tools/gen_params.py and engine.h disagree\");\n#endif\n")
     print("%d params (+ preset, user, 2 readouts, 2 arrows; %d factory programs) -> vst/params.json, src/plugin_keys.h" % (NENGINE, len(names)))
 
 
