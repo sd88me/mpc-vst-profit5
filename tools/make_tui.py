@@ -146,6 +146,14 @@ def arrow(w, h, direction, lit):
     return im
 
 
+def text_key(w, h, caption, lit):
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((0, 0, w - 1, h - 1), 8, fill=(58, 58, 62) if lit else (34, 34, 37), outline=(234, 234, 228), width=2)
+    d.text((w // 2, h // 2), caption, font=font(20), fill=(255, 46, 38) if lit else (234, 234, 228), anchor="mm")
+    return im
+
+
 def save(im, name):
     im.save(os.path.join(OUT, name))
     return name
@@ -236,6 +244,13 @@ def build_page(name, fn, spec):
             p.sample[key] = "1-1 Brass"
         elif kind == "readout":
             w, h = int(a["w"]), int(a["h"])
+            if name == "PROGRAMMER":   # +FAV / -FAV share the import status row: the status takes the middle
+                w = 600
+                for k, cap, x in (("fav_add", "+FAV", 960), ("fav_del", "-FAV", 1072)):
+                    p.kids.append(entry(k, "Button", {"version": 2, "onImage": save(text_key(100, 42, cap, True), k + "_on.png"),
+                                                      "offImage": save(text_key(100, 42, cap, False), k + "_off.png"), "buttonId": 1,
+                                                      "numButtonsInGroup": 1, "handleName": "Data", "gestureBehaviour": GESTURE},
+                                        B(x, cy - 21, 100, 42), P(k)))
             p.kids.append(label(B(cx - w // 2, cy - h // 2, w, h), P(key), h=22.0, colour="ffc8c8c0", style="SemiBold"))
             p.sample[key] = "1 imported (U01-U01)"
     return p
@@ -320,7 +335,7 @@ def main():
             for subname, img in render_preview(p, bgname, subs):
                 img.convert("RGB").save(os.path.join(PREVIEW, subname.replace(" ", "_").lower() + ".png"))
     for key in LOCK:
-        if PARAMS[key].get("options"):
+        if PARAMS.get(key, {}).get("options"):
             repl.append({"key": P(key), "value": PARAMS[key]["options"]})
     defs = [{"key": "knob overlay", "value": overlay_def()}] + [{"key": k, "value": v} for k, v in DEFS.items()]
     tui = {"pageData": {"version": 1,
@@ -331,7 +346,7 @@ def main():
           "Screen Mode Q-Links": {"version": 4, "map": qmaps}, "Program Mode Q-Links": {"Q-Link %d" % n: -1 for n in range(1, 17)}}
     open(os.path.join(OUT, "Q-Links.json"), "w").write(dump(ql) + "\n")
     used = {k for _, gs in sum(QLINKS.values(), []) for g in gs for k in g}
-    missing = [k for k in LOCK if k not in used and not PARAMS[k].get("momentary") and PARAMS[k].get("display") != "string" and k != "user"]
+    missing = [k for k in LOCK if k in PARAMS and k not in used and not PARAMS[k].get("momentary") and PARAMS[k].get("display") != "string" and k != "user"]
     print("wrote %s - %d tabs, %d files; not on a Q-Link: %s" % (OUT, len(tabs), len(os.listdir(OUT)), ", ".join(missing) or "none"))
 
 

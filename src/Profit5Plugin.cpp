@@ -14,6 +14,10 @@
 //     host only re-reads a param's text when its value moves.
 //   * programs: the MPC's PRESET menu lists the engine's 128 slots ("preset:<n>": factory sheets, then imported patches, then Init),
 //     as 0.2.1 did. Picking one sets "preset"; a change of "preset" (knob, arrows, MIDI program change) moves the menu's pick.
+//   * favourites (kLocal, appended after the 0.2.1 table): 32 more PRESET entries after the slots. +FAV saves the current sound with its
+//     edits (the engine state) in the first free one, -FAV deletes the favourite that is picked. They are kept in
+//     <plugin folder>/profit5-favourites.dat, shared by every project. While a favourite is picked the menu stays on it until the
+//     program changes.
 // Parameter 0 is PM FILT ENV. The host nudges parameter 0 on every prepare: a change applies only after it has held for ~40 ms.
 // State: the engine's own "state" string ("P5A <program> <58 values>") is the truth; it travels as the MPC chunk's extra state, and
 // nothing is written to the engine while the MPC chunk restores parameter values. A project saved by the 1.x wrapper build stored
@@ -33,6 +37,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -122,7 +128,8 @@ public:
         // The engine scans the folder it is given for .h2p / .zip patches. 1.x gave it <plugin folder>/banks (MODULE_SUBDIR "banks"):
         // keep that, so imported patches and the projects that picked them stay where they were.
         // (Not mpc::contentPath(): a function-local static std::string segfaults at dlclose.)
-        banksDir_ = mpc::detail::computePluginFolder() + "/banks";
+        const std::string folder = mpc::detail::computePluginFolder();
+        banksDir_ = folder + "/banks";
         eng_ = mpc_engine();
         inst_ = eng_->create(banksDir_.c_str());
         char b[64];
@@ -132,6 +139,9 @@ public:
             char name[64];
             addProgram(engineGet(b, name, sizeof name) ? name : "Init", {});
         }
+        for (int i = 0; i < kFavSlots; ++i) addProgram("", {});
+        favFile_ = folder + "/profit5-favourites.dat";
+        loadFavs();
         worker_ = std::thread(&Profit5Plugin::workerMain, this);
     }
 
@@ -187,6 +197,7 @@ public:
         if (index < 0 || index >= kNumParams || !inst_) return;
         if (t_pushing == index) return;          // the host echoing what the worker just told it
         const PSpec& s = g_pspecs[index];
+        if (s.flags & kLocal) { localChanged(index, plain); return; }
         hostAt_[index].store(nowMs());
         if (loading_.load()) return;             // an MPC chunk is restoring values: the engine state follows as extra state
         if (s.flags & kText) return;             // a readout's counter: nothing to send
@@ -261,6 +272,7 @@ public:
     {
         if (!data || !size) return;
         ignoreProgUntil_.store(nowMs() + 2000);   // the host re-picks the saved program after a project load: the project's sound wins
+        favActive_.store(-1);
         applyState(std::string(reinterpret_cast<const char*>(data), strnlen(reinterpret_cast<const char*>(data), size)));
     }
 
@@ -271,6 +283,7 @@ public:
         const std::string s(data, strnlen(data, size));
         if (!isState(s)) return false;
         ignoreProgUntil_.store(nowMs() + 2000);
+        favActive_.store(-1);
         applyState(s);
         return true;
     }
@@ -278,7 +291,9 @@ public:
     // The MPC picked a program in its PRESET menu (the wrapped effSetProgram; the framework has already stored the pick).
     void programPicked(int prog)
     {
-        if (prog < 0 || prog >= kPresetSlots || nowMs() < ignoreProgUntil_.load()) return;
+        if (prog < 0 || prog >= kPresetSlots + kFavSlots || nowMs() < ignoreProgUntil_.load()) return;
+        if (prog >= kPresetSlots) { loadFav(prog - kPresetSlots); return; }
+        favActive_.store(-1);
         char b[24];
         if (engineGet("preset", b, sizeof b) && std::atoi(b) == prog) return;
         std::snprintf(b, sizeof b, "%d", prog);
@@ -421,12 +436,17 @@ private:
             if (moved || std::fabs(v - told_[i]) > 1e-4f) { pushValue(i, v); if (!moved) ++changed; }
         }
 
-        // the PRESET menu follows the engine's program (knob, arrows, MIDI program change, a loaded state)
+        // the PRESET menu follows the engine's program (knob, arrows, MIDI program change, a loaded state); a picked favourite stays
+        // picked until the program changes
         if (engineGet("preset", buf, sizeof buf))
         {
-            const int prog = std::atoi(buf);
-            if (prog >= 0 && prog < kPresetSlots && prog != currentProgram_) { currentProgram_ = prog; wantDisplay_ = true; }
+            int prog = std::atoi(buf);
+            const int fav = favActive_.load();
+            if (fav >= 0 && prog == favBase_.load()) prog = kPresetSlots + fav;
+            else if (fav >= 0) favActive_.store(-1);
+            if (prog >= 0 && prog < kPresetSlots + kFavSlots && prog != currentProgram_) { currentProgram_ = prog; wantDisplay_ = true; }
         }
+        if (favDirty_.exchange(false)) { saveFavs(); wantDisplay_ = true; }   // new names in the PRESET menu
 
         // text readouts: every 100 ms; a changed text bumps the counter (the host re-reads text when the value moves)
         bool textChanged = false;
@@ -453,6 +473,120 @@ private:
         }
     }
 
+    // ---- favourites (kLocal) ----------------------------------------------------------------------------------------------------
+    struct Fav { bool used = false; std::string name, state; };
+
+    // "P5F1", slot count, then per slot: used (1 byte), name length + name, state length + state (u32 little endian lengths)
+    void loadFavs()
+    {
+        std::lock_guard<std::mutex> g(favMu_);
+        favs_.assign(kFavSlots, Fav());
+        std::ifstream f(favFile_, std::ios::binary);
+        char magic[4] = {};
+        uint32_t n = 0;
+        if (f.read(magic, 4) && !std::memcmp(magic, "P5F1", 4) && f.read(reinterpret_cast<char*>(&n), 4))
+            for (uint32_t i = 0; i < n && i < (uint32_t)kFavSlots; ++i)
+            {
+                char used = 0;
+                uint32_t ln = 0, ls = 0;
+                if (!f.read(&used, 1) || !f.read(reinterpret_cast<char*>(&ln), 4) || ln > 256) break;
+                std::string name(ln, '\0');
+                if (ln && !f.read(&name[0], ln)) break;
+                if (!f.read(reinterpret_cast<char*>(&ls), 4) || ls > (uint32_t)kStateMax) break;
+                std::string st(ls, '\0');
+                if (ls && !f.read(&st[0], ls)) break;
+                favs_[i].used = used != 0 && isState(st);
+                favs_[i].name = name;
+                favs_[i].state = st;
+            }
+        for (int i = 0; i < kFavSlots; ++i) nameProgram(i);
+    }
+
+    void saveFavs()   // worker thread: a snapshot under the lock, then the file (.tmp + rename)
+    {
+        std::vector<Fav> snap;
+        { std::lock_guard<std::mutex> g(favMu_); snap = favs_; }
+        const std::string tmp = favFile_ + ".tmp";
+        {
+            std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
+            if (!f) return;
+            const uint32_t n = (uint32_t)snap.size();
+            f.write("P5F1", 4);
+            f.write(reinterpret_cast<const char*>(&n), 4);
+            for (const Fav& v : snap)
+            {
+                const char used = v.used ? 1 : 0;
+                const uint32_t ln = (uint32_t)v.name.size(), ls = (uint32_t)v.state.size();
+                f.write(&used, 1);
+                f.write(reinterpret_cast<const char*>(&ln), 4);
+                f.write(v.name.data(), ln);
+                f.write(reinterpret_cast<const char*>(&ls), 4);
+                f.write(v.state.data(), ls);
+            }
+        }
+        std::rename(tmp.c_str(), favFile_.c_str());
+    }
+
+    void nameProgram(int i)   // favMu_ held
+    {
+        char b[16];
+        std::snprintf(b, sizeof b, "F%02d ", i + 1);
+        programs_[(size_t)(kPresetSlots + i)].name = b + (favs_[(size_t)i].used ? favs_[(size_t)i].name : std::string("--"));
+    }
+
+    void loadFav(int slot)
+    {
+        std::string st;
+        { std::lock_guard<std::mutex> g(favMu_); if (slot >= 0 && slot < kFavSlots && favs_[(size_t)slot].used) st = favs_[(size_t)slot].state; }
+        if (st.empty()) return;
+        favBase_.store(std::atoi(st.c_str() + 4));   // "P5A <program> ...": the program the favourite was made from
+        favActive_.store(slot);
+        applyState(st);
+    }
+
+    void localChanged(int index, float plain)
+    {
+        if (plain < 0.5f) { held_[index].store(false); return; }
+        if (held_[index].exchange(true)) return;
+        release_[index].store(true);   // a momentary: back to 0 on the next worker pass
+        if (index == kFavAdd)
+        {
+            Fav v;
+            v.state = engineState();
+            char b[64];
+            v.name = engineGet("program_name", b, sizeof b) ? b : "";
+            if (v.name.empty()) v.name = "Favourite";
+            if (!isState(v.state)) return;
+            v.used = true;
+            int slot = -1;
+            {
+                std::lock_guard<std::mutex> g(favMu_);
+                for (int i = 0; i < kFavSlots && slot < 0; ++i) if (!favs_[(size_t)i].used) slot = i;
+                if (slot >= 0) { favs_[(size_t)slot] = v; nameProgram(slot); }
+            }
+            if (slot >= 0)
+            {
+                favBase_.store(std::atoi(v.state.c_str() + 4));   // the new favourite is now the picked one
+                favActive_.store(slot);
+                favDirty_.store(true);
+            }
+            return;
+        }
+        if (index == kFavDel)   // the favourite that is picked now
+        {
+            const int fav = favActive_.load();
+            if (fav < 0) return;
+            bool had;
+            {
+                std::lock_guard<std::mutex> g(favMu_);
+                had = favs_[(size_t)fav].used;
+                if (had) { favs_[(size_t)fav] = Fav(); nameProgram(fav); }
+            }
+            favActive_.store(-1);
+            if (had) favDirty_.store(true);
+        }
+    }
+
 public:
 #ifdef P5_TEST
     void dbgTick() { tickOnce(true); }
@@ -463,12 +597,24 @@ public:
     }
     void dbgEngineSet(const char* key, const char* v) { engineSet(key, v); }
     void dbgNoIgnore() { ignoreProgUntil_.store(0); }
+    int dbgFavCount()
+    {
+        std::lock_guard<std::mutex> g(favMu_);
+        int n = 0;
+        for (const Fav& v : favs_) n += v.used ? 1 : 0;
+        return n;
+    }
 #endif
 
 private:
     const mpc_engine_t* eng_ = nullptr;
     void* inst_ = nullptr;
-    std::string banksDir_;
+    std::string banksDir_, favFile_;
+    std::mutex favMu_;
+    std::vector<Fav> favs_;
+    std::atomic<bool> favDirty_{false};
+    std::atomic<int> favActive_{-1};   // the favourite picked now (-1 = none)
+    std::atomic<int> favBase_{-1};     // the engine program it was made from
     pthread_mutex_t lock_;   // one engine call at a time; held for microseconds
     std::thread worker_;
     std::atomic<bool> quit_{false};
@@ -531,6 +677,7 @@ extern "C" MPC_EXPORT int p5_dbg_engine(AEffect* e, const char* key, char* out, 
     return (int)s.size();
 }
 extern "C" MPC_EXPORT void p5_dbg_engine_set(AEffect* e, const char* key, const char* v) { static_cast<Profit5Plugin*>(e->object)->dbgEngineSet(key, v); }
+extern "C" MPC_EXPORT int p5_dbg_favs(AEffect* e) { return static_cast<Profit5Plugin*>(e->object)->dbgFavCount(); }
 extern "C" MPC_EXPORT void p5_dbg_no_ignore(AEffect* e) { static_cast<Profit5Plugin*>(e->object)->dbgNoIgnore(); }
 #endif
 

@@ -62,3 +62,5 @@ program_name
 preset_prev
 preset_next
 import_status
+fav_add
+fav_del

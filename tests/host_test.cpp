@@ -22,6 +22,7 @@ extern "C" void p5_dbg_tick(AEffect*);
 extern "C" int p5_dbg_engine(AEffect*, const char*, char*, int);
 extern "C" void p5_dbg_engine_set(AEffect*, const char*, const char*);
 extern "C" void p5_dbg_no_ignore(AEffect*);
+extern "C" int p5_dbg_favs(AEffect*);
 
 static std::atomic<int> g_automate[kNumParams];
 static std::atomic<int> g_updateDisplay{0};
@@ -118,21 +119,22 @@ int main(int argc, char** argv)
     a->dispatcher(a, effGetEffectName, 0, 0, name, 0);
     CHECK(a->uniqueID == (VstInt32)P5_EXPECT_UID, "uid %08x", (unsigned)a->uniqueID);
     CHECK(!std::strcmp(name, P5_EXPECT_NAME), "name \"%s\"", name);
-    CHECK(a->numParams == 64, "64 params, as 0.2.1 (%d)", a->numParams);
+    CHECK(a->numParams == 66, "66 params: the 64 of 0.2.1 + +FAV / -FAV (%d)", a->numParams);
     CHECK(a->dispatcher(a, effGetVendorVersion, 0, 0, nullptr, 0) == 2000, "version 2000");
     {
         int bad = 0, i = 0;
         std::ifstream f("vst/params.lock");
         std::string line;
         while (std::getline(f, line)) if (!line.empty() && line[0] != '#' && line != g_pspecs[i++].key) bad++;
-        CHECK(i == 64 && bad == 0, "order = vst/params.lock (%d keys, %d differ)", i, bad);
+        CHECK(i == 66 && bad == 0, "order = vst/params.lock (%d keys, %d differ)", i, bad);
         char pn[64] = {0};
         a->dispatcher(a, effGetParamName, PMF, 0, pn, 0);
         CHECK(PMF == 0 && PRE == 58 && ISTAT == 63, "param 0 is PM Filt Env (\"%s\"), preset 58, import_status 63", pn);
     }
 
     std::printf("== PRESET menu\n");
-    CHECK(a->numPrograms == 128, "128 programs (%d)", a->numPrograms);
+    CHECK(a->numPrograms == 160, "160 programs: 128 slots + 32 favourites (%d)", a->numPrograms);
+    CHECK(kFavAdd == 64 && kFavDel == 65 && progName(a, 128) == "F01 --", "favourites after the slots (\"%s\")", progName(a, 128).c_str());
     CHECK(progName(a, 0) == "1-1 Brass" || progName(a, 0).compare(0, 4, "1-1 ") == 0, "program 0 \"%s\"", progName(a, 0).c_str());
     CHECK(progName(a, 38) == "U01 Test Brass", "program 38 = the imported patch (\"%s\")", progName(a, 38).c_str());
     CHECK(progName(a, 39) == "U02 Init", "program 39 = a free slot (\"%s\")", progName(a, 39).c_str());
@@ -259,6 +261,47 @@ int main(int argc, char** argv)
         setChunk(b, trunc);
         settle(b);
         CHECK(eng(b, "state").compare(0, 4, "P5A ") == 0, "a truncated MPC chunk: no crash, still a valid program");
+    }
+
+    std::printf("== favourites\n");
+    {
+        const int n0 = p5_dbg_favs(a);
+        p5_dbg_no_ignore(a);
+        a->dispatcher(a, effSetProgram, 0, 3, nullptr, 0);
+        settle(a);
+        a->setParameter(a, CUT, norm(CUT, 1.25f));
+        settle(a);
+        const std::string saved = eng(a, "state");
+        const std::string base = disp(a, PNAME);
+        a->setParameter(a, kFavAdd, 1.0f);
+        settle(a);
+        settle(a);
+        CHECK(p5_dbg_favs(a) == n0 + 1 && plainOf(a, kFavAdd) < 0.5f, "+FAV saves one and drops back (%d)", p5_dbg_favs(a));
+        a->setParameter(a, kFavAdd, 0.0f);
+        const int slot = 128 + n0;
+        {   // the host's program names are 24 characters at most
+            const std::string want = ("F" + std::string(n0 + 1 < 10 ? "0" : "") + std::to_string(n0 + 1) + " " + base).substr(0, 24);
+            CHECK(progName(a, slot) == want, "PRESET menu: \"%s\"", progName(a, slot).c_str());
+        }
+        CHECK(a->dispatcher(a, effGetProgram, 0, 0, nullptr, 0) == slot, "the new favourite is the picked entry");
+        a->dispatcher(a, effSetProgram, 0, 10, nullptr, 0);
+        settle(a);
+        CHECK(engi(a, "preset") == 10, "another program in between");
+        a->dispatcher(a, effSetProgram, 0, slot, nullptr, 0);
+        settle(a); settle(a);
+        CHECK(eng(a, "state") == saved && near(plainOf(a, CUT), 1.25f), "picking it restores it (CUTOFF %.2f)", plainOf(a, CUT));
+        CHECK(a->dispatcher(a, effGetProgram, 0, 0, nullptr, 0) == slot, "the menu stays on the favourite (%d)", (int)a->dispatcher(a, effGetProgram, 0, 0, nullptr, 0));
+        AEffect* e2 = open("E (reads the favourites file)");
+        CHECK(p5_dbg_favs(e2) == n0 + 1 && progName(e2, slot) == progName(a, slot), "a new instance reads it from profit5-favourites.dat");
+        close(e2);
+        a->setParameter(a, kFavDel, 1.0f);
+        settle(a); settle(a);
+        a->setParameter(a, kFavDel, 0.0f);
+        CHECK(p5_dbg_favs(a) == n0 && progName(a, slot).compare(4, 2, "--") == 0, "-FAV deletes the picked one (\"%s\")", progName(a, slot).c_str());
+        a->setParameter(a, PNEXT, 1.0f);
+        settle(a);
+        a->setParameter(a, PNEXT, 0.0f);
+        CHECK(a->dispatcher(a, effGetProgram, 0, 0, nullptr, 0) == engi(a, "preset"), "after that the menu follows the program again");
     }
 
     close(b);
