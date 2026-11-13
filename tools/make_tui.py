@@ -127,6 +127,43 @@ def readout_def(w, h):
     return key
 
 
+def programmer_art():
+    """PROGRAMMER's page: the 0.2.1 art with its text areas redrawn for this build (the program selector, imports, favourites and
+    ABOUT). The VOICES box and its controls are untouched, so the knob and switch pictures still match the face around them."""
+    sys.path.insert(0, os.path.join(ROOT, "skin"))
+    import make_skin as ms
+    art = Image.open(os.path.join(ART, "program.png")).convert("RGB")
+    grain = ms.face(ms.W * ms.SS, ms.H * ms.SS).resize((ms.W, ms.H), Image.LANCZOS)   # the face's paint and grain, fresh
+    for box in ((50, 36, 1230, 292), (678, 340, 1230, 592)):                            # inside the PROGRAMMER and ABOUT outlines
+        art.paste(grain.crop(box), box[:2])
+    ink, dim = ms.INK + (255,), (150, 150, 144, 255)
+    hi = Image.new("RGBA", (ms.W * ms.SS, ms.H * ms.SS), (0, 0, 0, 0))
+    d = ImageDraw.Draw(hi)
+
+    def face_font(px, bold):   # the panel's FreeSans when installed, else Liberation Sans (SIL OFL, skin/fonts), the same shapes
+        free = os.path.join(ms.FONT_DIR, "FreeSansBold.ttf" if bold else "FreeSans.ttf")
+        path = free if os.path.exists(free) else os.path.join(ROOT, "skin", "fonts", "LiberationSans-Bold.ttf" if bold else "LiberationSans-Regular.ttf")
+        return ImageFont.truetype(path, int(round(px * ms.SS)))
+
+    def text(x, y, s, px, fill=ink, anchor="mm", bold=True):
+        d.text((ms.S(x), ms.S(y)), s, font=face_font(px, bold), fill=fill, anchor=anchor)
+    text(640, 166, "Step with the arrows or the data wheel, or pick from the MPC's PRESET menu.", 12, dim, bold=False)
+    text(90, 196, "IMPORTED PATCHES", 12, anchor="lm")
+    text(1066, 186, "FAVOURITES", 12)
+    d.line((ms.S(70), ms.S(254), ms.S(1210), ms.S(254)), fill=(70, 70, 68, 255), width=ms.S(1))
+    text(640, 270, "Imports: Repro-5 .h2p patches or .zip files in the plugin's banks folder, read when the plugin opens.", 11, dim, bold=False)
+    text(640, 287, "Favourites: +FAV names and saves the current sound in the PRESET menu; -FAV deletes the one that is picked.", 11, dim, bold=False)
+    for i, line in enumerate(["Five voices, two oscillators, a four-pole low-pass filter and Poly-Mod.",
+                              "Rev 2: SSM-style oscillators, filter and envelopes, with stepped knobs.",
+                              "Rev 4: CEM-style, with smooth knobs, velocity and aftertouch.",
+                              "Programs: 38 factory sheets, then your imports and favourites.",
+                              "* Not on the 1978 panel: Init Amt, Rev, Half/Full, Vintage, Touch."]):
+        text(700, 384 + i * 40, line, 12.5, anchor="lm", bold=False)
+    art = art.convert("RGBA")
+    art.alpha_composite(hi.resize((ms.W, ms.H), Image.LANCZOS))
+    return save(art.convert("RGB"), "program_native.png")
+
+
 def copy_art(name):
     shutil.copy(os.path.join(ART, name), os.path.join(OUT, name))
     return name
@@ -247,15 +284,17 @@ def build_page(name, fn, spec):
             p.sample[key] = "1-1 Brass"
         elif kind == "readout":
             w, h = int(a["w"]), int(a["h"])
-            if name == "PROGRAMMER":   # +FAV / -FAV share the import status row: the status takes the middle
-                w = 600
+            if name == "PROGRAMMER":   # imports on the left of the row, +FAV / -FAV on the right (programmer_art)
+                p.kids.append(label(B(90, cy - h // 2 + 6, 560, h), P(key), h=24.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+                p.sample[key] = "1 imported (U01-U01)"
                 for k, cap, x in (("fav_add", "+FAV", 960), ("fav_del", "-FAV", 1072)):
                     p.kids.append(entry(k, "Button", {"version": 2, "onImage": save(text_key(100, 42, cap, True), k + "_on.png"),
                                                       "offImage": save(text_key(100, 42, cap, False), k + "_off.png"), "buttonId": 1,
                                                       "numButtonsInGroup": 1, "handleName": "Data", "gestureBehaviour": GESTURE},
                                         B(x, cy - 21, 100, 42), P(k)))
-            p.kids.append(label(B(cx - w // 2, cy - h // 2, w, h), P(key), h=22.0, colour="ffc8c8c0", style="SemiBold"))
-            p.sample[key] = "1 imported (U01-U01)"
+            else:
+                p.kids.append(label(B(cx - w // 2, cy - h // 2, w, h), P(key), h=22.0, colour="ffc8c8c0", style="SemiBold"))
+                p.sample[key] = "1 imported (U01-U01)"
     return p
 
 
@@ -374,7 +413,7 @@ def main():
         os.makedirs(PREVIEW, exist_ok=True)
     for fn, name in enumerate(TAB_ORDER):
         spec = spec_all[name]
-        bgname = copy_art(spec["art"])
+        bgname = programmer_art() if name == "PROGRAMMER" else copy_art(spec["art"])
         p = build_page(name, fn, spec)
         if name == "PROGRAMMER":
             keyboard(p)
