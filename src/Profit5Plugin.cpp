@@ -17,7 +17,9 @@
 //   * favourites (kLocal, appended after the 0.2.1 table): 32 more PRESET entries after the slots. +FAV saves the current sound with its
 //     edits (the engine state) in the first free one, -FAV deletes the favourite that is picked. They are kept in
 //     <plugin folder>/profit5-favourites.dat, shared by every project. While a favourite is picked the menu stays on it until the
-//     program changes.
+//     program changes. +FAV first opens the drawn keyboard (kb_open = 1, the skin shows it) with the program's name to edit; SAVE stores
+//     the sound as it was when +FAV was pressed, under the typed name. The MPC can report one tap on a drawn key as two presses
+//     (mpc-vst-plugins NOTES.md): a key's repeat within 250 ms is ignored.
 // Parameter 0 is PM FILT ENV. The host nudges parameter 0 on every prepare: a change applies only after it has held for ~40 ms.
 // State: the engine's own "state" string ("P5A <program> <58 values>") is the truth; it travels as the MPC chunk's extra state, and
 // nothing is written to the engine while the MPC chunk restores parameter values. A project saved by the 1.x wrapper build stored
@@ -249,6 +251,7 @@ public:
         if (index < 0 || index >= kNumParams) return false;
         const PSpec& s = g_pspecs[index];
         char buf[128];
+        if (index == kFavName) { std::lock_guard<std::mutex> g(favMu_); out = kbName_ + "_"; return true; }
         if (s.flags & kText) { out = engineGet(s.key, buf, sizeof buf) ? buf : ""; return true; }
         if (s.flags & kMomentary) { out = ""; return true; }
         if (s.flags & kFloat) { std::snprintf(buf, sizeof buf, "%.1f", plain); out = buf; return true; }   // 0.0 .. 10.0, as the panel
@@ -273,6 +276,8 @@ public:
         if (!data || !size) return;
         ignoreProgUntil_.store(nowMs() + 2000);   // the host re-picks the saved program after a project load: the project's sound wins
         favActive_.store(-1);
+        kbOpen_.store(false);
+        kbDirty_.store(true);   // a project saved with the keyboard open restored kb_open = 1: push it closed
         applyState(std::string(reinterpret_cast<const char*>(data), strnlen(reinterpret_cast<const char*>(data), size)));
     }
 
@@ -447,6 +452,13 @@ private:
             if (prog >= 0 && prog < kPresetSlots + kFavSlots && prog != currentProgram_) { currentProgram_ = prog; wantDisplay_ = true; }
         }
         if (favDirty_.exchange(false)) { saveFavs(); wantDisplay_ = true; }   // new names in the PRESET menu
+        if (kbDirty_.exchange(false))   // the keyboard opened or closed, or the typed name changed
+        {
+            pushValue(kKbOpen, kbOpen_.load() ? 1.0f : 0.0f);
+            counter_ = (counter_ + 1) % 1024;
+            pushValue(kFavName, (float)counter_);
+            wantDisplay_ = true;
+        }
 
         // text readouts: every 100 ms; a changed text bumps the counter (the host re-reads text when the value moves)
         bool textChanged = false;
@@ -544,18 +556,86 @@ private:
         applyState(st);
     }
 
+    void closeKeyboard()
+    {
+        if (kbOpen_.exchange(false)) kbDirty_.store(true);
+    }
+
+    void typeKey(int k)   // favMu_ held; k = 0 .. kKbCount - 1
+    {
+        const int nchars = (int)sizeof kKbChars - 1;
+        if (k < nchars || k == nchars)   // a character or space
+        {
+            if ((int)kbName_.size() >= kFavNameMax) return;
+            char c = k < nchars ? kKbChars[k] : ' ';
+            const bool cap = kbName_.empty() || kbName_.back() == ' ';
+            if (c >= 'A' && c <= 'Z')
+            {
+                if (cap == kbShift_) c = (char)(c - 'A' + 'a');   // capital at the start and after a space; SHIFT flips the next letter
+                kbShift_ = false;
+            }
+            kbName_ += c;
+        }
+        else if (k == nchars + 1) { if (!kbName_.empty()) kbName_.pop_back(); }
+        else if (k == nchars + 2) kbShift_ = !kbShift_;
+    }
+
     void localChanged(int index, float plain)
     {
+        if (!(g_pspecs[index].flags & kMomentary)) return;   // kb_open / fav_name: set by the plugin only
         if (plain < 0.5f) { held_[index].store(false); return; }
         if (held_[index].exchange(true)) return;
         release_[index].store(true);   // a momentary: back to 0 on the next worker pass
-        if (index == kFavAdd)
+        const long long now = nowMs();
+        if (now - lastFire_[index - kFavAdd] < 250) return;   // the second report of one tap
+        lastFire_[index - kFavAdd] = now;
+        if (index >= kKbFirst && index < kKbFirst + kKbCount)
         {
-            Fav v;
-            v.state = engineState();
+            if (!kbOpen_.load()) return;
+            const int k = index - kKbFirst, nchars = (int)sizeof kKbChars - 1;
+            if (k == nchars + 3) { closeKeyboard(); return; }   // CANCEL
+            if (k == nchars + 4) { saveTyped(); return; }       // SAVE
+            { std::lock_guard<std::mutex> g(favMu_); typeKey(k); }
+            kbDirty_.store(true);
+            return;
+        }
+        if (index == kFavAdd)   // open the keyboard on the program's name; the sound is taken now
+        {
+            const std::string st = engineState();
+            if (!isState(st)) return;
             char b[64];
-            v.name = engineGet("program_name", b, sizeof b) ? b : "";
-            if (v.name.empty()) v.name = "Favourite";
+            std::string name = engineGet("program_name", b, sizeof b) ? b : "";
+            if (name.size() > (size_t)kFavNameMax) name.resize((size_t)kFavNameMax);
+            {
+                std::lock_guard<std::mutex> g(favMu_);
+                kbState_ = st;
+                kbName_ = name;
+                kbShift_ = false;
+            }
+            kbOpen_.store(true);
+            kbDirty_.store(true);
+            return;
+        }
+        localVerb(index);
+    }
+
+    void saveTyped()
+    {
+        Fav v;
+        {
+            std::lock_guard<std::mutex> g(favMu_);
+            v.state = kbState_;
+            v.name = kbName_;
+        }
+        while (!v.name.empty() && v.name.back() == ' ') v.name.pop_back();
+        if (v.name.empty()) v.name = "Favourite";
+        closeKeyboard();
+        storeFav(v);
+    }
+
+    void storeFav(Fav v)
+    {
+        {
             if (!isState(v.state)) return;
             v.used = true;
             int slot = -1;
@@ -570,8 +650,11 @@ private:
                 favActive_.store(slot);
                 favDirty_.store(true);
             }
-            return;
         }
+    }
+
+    void localVerb(int index)
+    {
         if (index == kFavDel)   // the favourite that is picked now
         {
             const int fav = favActive_.load();
@@ -597,6 +680,7 @@ public:
     }
     void dbgEngineSet(const char* key, const char* v) { engineSet(key, v); }
     void dbgNoIgnore() { ignoreProgUntil_.store(0); }
+    void dbgNoRepeatGuard() { std::fill(std::begin(lastFire_), std::end(lastFire_), 0LL); }
     int dbgFavCount()
     {
         std::lock_guard<std::mutex> g(favMu_);
@@ -615,6 +699,10 @@ private:
     std::atomic<bool> favDirty_{false};
     std::atomic<int> favActive_{-1};   // the favourite picked now (-1 = none)
     std::atomic<int> favBase_{-1};     // the engine program it was made from
+    std::atomic<bool> kbOpen_{false}, kbDirty_{false};
+    std::string kbName_, kbState_;     // favMu_: the name being typed, the sound +FAV took
+    bool kbShift_ = false;
+    long long lastFire_[kNumParams] = {0};   // per local momentary (from kFavAdd): when it last fired
     pthread_mutex_t lock_;   // one engine call at a time; held for microseconds
     std::thread worker_;
     std::atomic<bool> quit_{false};
@@ -678,6 +766,7 @@ extern "C" MPC_EXPORT int p5_dbg_engine(AEffect* e, const char* key, char* out, 
 }
 extern "C" MPC_EXPORT void p5_dbg_engine_set(AEffect* e, const char* key, const char* v) { static_cast<Profit5Plugin*>(e->object)->dbgEngineSet(key, v); }
 extern "C" MPC_EXPORT int p5_dbg_favs(AEffect* e) { return static_cast<Profit5Plugin*>(e->object)->dbgFavCount(); }
+extern "C" MPC_EXPORT void p5_dbg_no_repeat_guard(AEffect* e) { static_cast<Profit5Plugin*>(e->object)->dbgNoRepeatGuard(); }
 extern "C" MPC_EXPORT void p5_dbg_no_ignore(AEffect* e) { static_cast<Profit5Plugin*>(e->object)->dbgNoIgnore(); }
 #endif
 

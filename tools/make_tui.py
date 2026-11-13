@@ -52,12 +52,15 @@ def B(x, y, w, h):
     return "%d %d %d %d" % (x, y, w, h)
 
 
-def entry(name, typ, data, b, remap=None, focus="No"):
+def entry(name, typ, data, b, remap=None, focus="No", ind=None):
+    bd = {"version": 2 if ind else 1, "acceptsHWFocus": focus, "showWhenDataModelInvalid": "Show", "whenVisible": "Always",
+          "boundsType": "Absolute", "bounds": b}
+    if ind:   # shown only while the handle has that index (Welle's drawn pick-lists, verified on a Live III)
+        bd["additionalInvalidatingHandles"] = ind
     return {"version": 2,
             "componentData": {"version": 1, "name": name, "type": typ, "data": data},
             "handle remapping": {"version": 1, "map": [{"key": "Data", "value": remap}] if remap else []},
-            "bounds": {"version": 1, "acceptsHWFocus": focus, "showWhenDataModelInvalid": "Show", "whenVisible": "Always",
-                       "boundsType": "Absolute", "bounds": b}}
+            "bounds": bd}
 
 
 def bg(colour="0"):
@@ -256,6 +259,42 @@ def build_page(name, fn, spec):
     return p
 
 
+KB_ROWS = [("1234567890", ["kb_bksp"]), ("QWERTYUIOP", []), ("ASDFGHJKL-", []), ("ZXCVBNM", ["kb_space"])]
+
+
+def keyboard(p):
+    """The drawn keyboard for naming a favourite: a full-page panel, the name, 42 keys; shown while kb_open = 1."""
+    ind = ["IndexedEnabling/1/2/%s" % P("kb_open")]
+    panel = Image.new("RGB", (1280, 628), (21, 21, 23))
+    d = ImageDraw.Draw(panel)
+    d.rounded_rectangle((42, 14, 1238, 614), 10, outline=(234, 234, 228), width=2)
+    d.text((76, 52), "FAVOURITE NAME", font=font(20), fill=(234, 234, 228), anchor="lm")
+    d.rounded_rectangle((300, 26, 1210, 80), 6, fill=(34, 34, 37), outline=(255, 46, 38), width=2)
+    p.kids.append(entry("kb panel", "Image", {"version": 2, "imageType": "Regular", "colour": "0", "image": save(panel, "kb_panel.png")},
+                        "0 0 1280 628", ind=ind))
+    p.kids.append(label(B(316, 26, 880, 54), P("fav_name"), h=32.0, style="Bold", just="left verticallyCentred"))
+    p.kids[-1]["bounds"] = entry("x", "x", {}, B(316, 26, 880, 54), ind=ind)["bounds"]
+    kw, kh, gap, x0, y0 = 98, 84, 8, 70, 104
+
+    def key(k, cap, x, y, w):
+        p.kids.append(entry(k, "Button", {"version": 2, "onImage": save(text_key(w, kh, cap, True), k + "_on.png"),
+                                          "offImage": save(text_key(w, kh, cap, False), k + "_off.png"), "buttonId": 1, "numButtonsInGroup": 1,
+                                          "handleName": "Data", "gestureBehaviour": GESTURE}, B(x, y, w, kh), P(k), ind=ind))
+    for r, (chars, extra) in enumerate(KB_ROWS):
+        y = y0 + r * (kh + gap)
+        x = x0 + r * 30
+        for c in chars:
+            key("kb_" + ("dash" if c == "-" else c.lower()), c, x, y, kw)
+            x += kw + gap
+        for k in extra:
+            w = 1210 - x
+            key(k, {"kb_bksp": "DEL", "kb_space": "SPACE"}[k], x, y, w)
+    y = y0 + 4 * (kh + gap)
+    key("kb_shift", "SHIFT", x0, y, 200)
+    key("kb_cancel", "CANCEL", 640 - 130, y, 260)
+    key("kb_save", "SAVE", 1210 - 260, y, 260)
+
+
 def tabs_for(p, bgname):
     out, qmaps = [], []
     for sub, (subname, groups) in enumerate(QLINKS[p.name]):
@@ -285,16 +324,25 @@ def tabs_for(p, bgname):
 # ---- preview: the page art with the widgets at their defaults and the Q-Link frames of each sub-tab (offline check) -----------
 def render_preview(p, bgname, rects_by_sub):
     outs = []
+    if any("additionalInvalidatingHandles" in k["bounds"] for k in p.kids):
+        rects_by_sub = rects_by_sub + [(rects_by_sub[0][0] + " keyboard", [])]
     for subname, rects in rects_by_sub:
+        shown = subname.endswith(" keyboard")
         img = Image.open(os.path.join(OUT, bgname)).convert("RGBA")
         d = ImageDraw.Draw(img)
         for k in p.kids:
+            if ("additionalInvalidatingHandles" in k["bounds"]) != shown and shown:
+                continue
+            if "additionalInvalidatingHandles" in k["bounds"] and not shown:
+                continue
             cd, (x, y, w, h) = k["componentData"], [int(v) for v in k["bounds"]["bounds"].split()]
             typ, data = cd["type"], cd["data"]
             remap = k["handle remapping"]["map"]
             key = LOCK[int(remap[0]["value"].split()[-1])] if remap else None
             spec = PARAMS.get(key, {})
-            if typ.startswith("knob_"):
+            if typ == "Image":
+                img.alpha_composite(Image.open(os.path.join(OUT, data["image"])).convert("RGBA"), (x, y))
+            elif typ.startswith("knob_"):
                 lo, hi = spec.get("min", 0), spec.get("max", 1)
                 frac = (spec.get("default", 0) - lo) / (hi - lo) if hi > lo else 0
                 strip = Image.open(os.path.join(OUT, DEFS[typ]["componentsData"][1]["componentData"]["data"]["filmStrip"])).convert("RGBA")
@@ -306,7 +354,9 @@ def render_preview(p, bgname, rects_by_sub):
                 pic = Image.open(os.path.join(OUT, data["onImage" if lit else "offImage"])).convert("RGBA")
                 img.alpha_composite(pic, (x, y))
             elif typ.startswith("readout_") or typ == "Label":
-                d.text((x + w / 2, y + h / 2), p.sample.get(key, ""), font=font(22 if typ == "Label" else 30), fill=(234, 234, 228), anchor="mm")
+                txt = "Lead 2_" if key == "fav_name" else p.sample.get(key, "")
+                left = "left" in k["componentData"]["data"].get("textStyle", {}).get("justification", "")
+                d.text((x if left else x + w / 2, y + h / 2), txt, font=font(22 if typ == "Label" else 30), fill=(234, 234, 228), anchor="lm" if left else "mm")
         for r in rects:
             d.rectangle(r, outline=(255, 46, 38), width=2)
         outs.append((subname, img))
@@ -326,6 +376,8 @@ def main():
         spec = spec_all[name]
         bgname = copy_art(spec["art"])
         p = build_page(name, fn, spec)
+        if name == "PROGRAMMER":
+            keyboard(p)
         t, q = tabs_for(p, bgname)
         tabs += t
         qmaps += q

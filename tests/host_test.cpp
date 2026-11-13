@@ -23,6 +23,7 @@ extern "C" int p5_dbg_engine(AEffect*, const char*, char*, int);
 extern "C" void p5_dbg_engine_set(AEffect*, const char*, const char*);
 extern "C" void p5_dbg_no_ignore(AEffect*);
 extern "C" int p5_dbg_favs(AEffect*);
+extern "C" void p5_dbg_no_repeat_guard(AEffect*);
 
 static std::atomic<int> g_automate[kNumParams];
 static std::atomic<int> g_updateDisplay{0};
@@ -119,14 +120,14 @@ int main(int argc, char** argv)
     a->dispatcher(a, effGetEffectName, 0, 0, name, 0);
     CHECK(a->uniqueID == (VstInt32)P5_EXPECT_UID, "uid %08x", (unsigned)a->uniqueID);
     CHECK(!std::strcmp(name, P5_EXPECT_NAME), "name \"%s\"", name);
-    CHECK(a->numParams == 66, "66 params: the 64 of 0.2.1 + +FAV / -FAV (%d)", a->numParams);
+    CHECK(a->numParams == 110, "110 params: the 64 of 0.2.1 + favourites and keyboard (%d)", a->numParams);
     CHECK(a->dispatcher(a, effGetVendorVersion, 0, 0, nullptr, 0) == 2000, "version 2000");
     {
         int bad = 0, i = 0;
         std::ifstream f("vst/params.lock");
         std::string line;
         while (std::getline(f, line)) if (!line.empty() && line[0] != '#' && line != g_pspecs[i++].key) bad++;
-        CHECK(i == 66 && bad == 0, "order = vst/params.lock (%d keys, %d differ)", i, bad);
+        CHECK(i == 110 && bad == 0, "order = vst/params.lock (%d keys, %d differ)", i, bad);
         char pn[64] = {0};
         a->dispatcher(a, effGetParamName, PMF, 0, pn, 0);
         CHECK(PMF == 0 && PRE == 58 && ISTAT == 63, "param 0 is PM Filt Env (\"%s\"), preset 58, import_status 63", pn);
@@ -273,16 +274,35 @@ int main(int argc, char** argv)
         settle(a);
         const std::string saved = eng(a, "state");
         const std::string base = disp(a, PNAME);
-        a->setParameter(a, kFavAdd, 1.0f);
+        auto key = [&](const char* k) { const int i = idx(k); p5_dbg_no_repeat_guard(a); a->setParameter(a, i, 1.0f); settle(a); a->setParameter(a, i, 0.0f); };
+        key("fav_add");
+        CHECK(std::lround(plainOf(a, kKbOpen)) == 1 && p5_dbg_favs(a) == n0, "+FAV opens the keyboard, nothing saved yet");
+        CHECK(disp(a, kFavName) == base.substr(0, kFavNameMax) + "_", "it starts from the program's name (\"%s\")", disp(a, kFavName).c_str());
+        a->setParameter(a, CUT, norm(CUT, 9.0f));   // a change while typing is not in the favourite: +FAV took the sound
         settle(a);
-        settle(a);
-        CHECK(p5_dbg_favs(a) == n0 + 1 && plainOf(a, kFavAdd) < 0.5f, "+FAV saves one and drops back (%d)", p5_dbg_favs(a));
-        a->setParameter(a, kFavAdd, 0.0f);
-        const int slot = 128 + n0;
-        {   // the host's program names are 24 characters at most
-            const std::string want = ("F" + std::string(n0 + 1 < 10 ? "0" : "") + std::to_string(n0 + 1) + " " + base).substr(0, 24);
-            CHECK(progName(a, slot) == want, "PRESET menu: \"%s\"", progName(a, slot).c_str());
+        for (int i = 0; i < 25; i++) key("kb_bksp");
+        CHECK(disp(a, kFavName) == "_", "delete empties it");
+        for (const char* k : {"kb_l", "kb_e", "kb_a", "kb_d", "kb_space", "kb_2", "kb_shift", "kb_x"}) key(k);
+        CHECK(disp(a, kFavName) == "Lead 2X_", "typed \"Lead 2X\": capital first letter, SHIFT for one letter (\"%s\")", disp(a, kFavName).c_str());
+        {   // one tap reported twice (down and up, no 0 between) types one letter
+            const int i = idx("kb_q");
+            p5_dbg_no_repeat_guard(a);
+            a->setParameter(a, i, 1.0f); settle(a);
+            a->setParameter(a, i, 1.0f); settle(a);
+            a->setParameter(a, i, 0.0f);
+            CHECK(disp(a, kFavName) == "Lead 2Xq_", "a doubled tap types once (\"%s\")", disp(a, kFavName).c_str());
         }
+        key("kb_bksp"); key("kb_bksp");
+        key("kb_save");
+        CHECK(std::lround(plainOf(a, kKbOpen)) == 0 && p5_dbg_favs(a) == n0 + 1, "SAVE stores it and closes the keyboard (%d)", p5_dbg_favs(a));
+        const int slot = 128 + n0;
+        CHECK(progName(a, slot) == "F" + std::string(n0 + 1 < 10 ? "0" : "") + std::to_string(n0 + 1) + " Lead 2", "PRESET menu: \"%s\"", progName(a, slot).c_str());
+        key("fav_add");
+        key("kb_z");
+        key("kb_cancel");
+        CHECK(std::lround(plainOf(a, kKbOpen)) == 0 && p5_dbg_favs(a) == n0 + 1, "CANCEL closes it without saving");
+        key("kb_a");
+        CHECK(p5_dbg_favs(a) == n0 + 1, "keys do nothing while it is closed");
         CHECK(a->dispatcher(a, effGetProgram, 0, 0, nullptr, 0) == slot, "the new favourite is the picked entry");
         a->dispatcher(a, effSetProgram, 0, 10, nullptr, 0);
         settle(a);
