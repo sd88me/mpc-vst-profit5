@@ -147,18 +147,29 @@ def programmer_art():
 
     def text(x, y, s, px, fill=ink, anchor="mm", bold=True):
         d.text((ms.S(x), ms.S(y)), s, font=face_font(px, bold), fill=fill, anchor=anchor)
-    text(640, 166, "Step with the arrows or the data wheel, or pick from the MPC's PRESET menu.", 12, dim, bold=False)
-    text(90, 196, "IMPORTED PATCHES", 12, anchor="lm")
-    text(1066, 186, "FAVOURITES", 12)
-    d.line((ms.S(70), ms.S(254), ms.S(1210), ms.S(254)), fill=(70, 70, 68, 255), width=ms.S(1))
-    text(640, 270, "Imports: Repro-5 .h2p patches or .zip files in the plugin's banks folder, read when the plugin opens.", 11, dim, bold=False)
-    text(640, 287, "Favourites: +FAV names and saves the current sound in the PRESET menu; -FAV deletes the one that is picked.", 11, dim, bold=False)
-    for i, line in enumerate(["Five voices, two oscillators, a four-pole low-pass filter and Poly-Mod.",
-                              "Rev 2: SSM-style oscillators, filter and envelopes, with stepped knobs.",
-                              "Rev 4: CEM-style, with smooth knobs, velocity and aftertouch.",
-                              "Programs: 38 factory sheets, then your imports and favourites.",
-                              "* Not on the 1978 panel: Init Amt, Rev, Half/Full, Vintage, Touch."]):
-        text(700, 384 + i * 40, line, 12.5, anchor="lm", bold=False)
+    def legend(x0, x1, y, label, px=11):   # the panel's group legend: "—— LABEL ——"
+        f = face_font(px, True)
+        tw = d.textlength(label, font=f) / ms.SS
+        cx = (x0 + x1) / 2
+        for a, b in ((x0, cx - tw / 2 - 8), (cx + tw / 2 + 8, x1)):
+            d.line((ms.S(a), ms.S(y), ms.S(b), ms.S(y)), fill=ink, width=ms.S(1))
+        text(cx, y, label, px)
+    # PROGRAMMER: the selector, imports on the left, favourites on the right; panel-style captions and legends only
+    legend(120, 1160, 168, "PROGRAM")
+    text(360, 258, "REPRO-5  .H2P / .ZIP  FROM BANKS FOLDER", 10, dim)
+    legend(70, 650, 280, "IMPORTED PATCHES")
+    text(1010, 258, "STORE", 10)
+    text(1122, 258, "DELETE", 10)
+    legend(950, 1182, 280, "FAVOURITES")
+    # ABOUT: a spec plate
+    plate = [("VOICES", "5  ·  POLY / UNISON"), ("OSCILLATORS", "2 + NOISE"), ("FILTER", "4-POLE LOW-PASS"),
+             ("MODULATION", "POLY-MOD  ·  WHEEL-MOD  ·  LFO"), ("REV 2", "SSM  ·  STEPPED KNOBS"),
+             ("REV 4", "CEM  ·  SMOOTH KNOBS  ·  VELOCITY / AT"), ("PROGRAMS", "1-1 TO 5-6  ·  U01-U90  ·  F01-F32")]
+    for i, (k, v) in enumerate(plate):
+        y = 372 + i * 28
+        text(704, y, k, 11, anchor="lm")
+        text(850, y, v, 11, (190, 190, 184, 255), anchor="lm")
+    text(704, 574, "*  NOT ON THE 1978 PANEL:  INIT AMT, REV, HALF / FULL, VINTAGE, TOUCH", 9.5, dim, anchor="lm")
     art = art.convert("RGBA")
     art.alpha_composite(hi.resize((ms.W, ms.H), Image.LANCZOS))
     return save(art.convert("RGB"), "program_native.png")
@@ -285,7 +296,7 @@ def build_page(name, fn, spec):
         elif kind == "readout":
             w, h = int(a["w"]), int(a["h"])
             if name == "PROGRAMMER":   # imports on the left of the row, +FAV / -FAV on the right (programmer_art)
-                p.kids.append(label(B(90, cy - h // 2 + 6, 560, h), P(key), h=24.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+                p.kids.append(label(B(70, cy - h // 2 + 4, 580, h), P(key), h=24.0, colour="ffeaeae4", style="SemiBold"))
                 p.sample[key] = "1 imported (U01-U01)"
                 for k, cap, x in (("fav_add", "+FAV", 960), ("fav_del", "-FAV", 1072)):
                     p.kids.append(entry(k, "Button", {"version": 2, "onImage": save(text_key(100, 42, cap, True), k + "_on.png"),

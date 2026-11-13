@@ -8790,7 +8790,7 @@
                       "height": 24.0
                     },
                     "colour": "ffeaeae4",
-                    "justification": "left verticallyCentred",
+                    "justification": "horizontallyCentred verticallyCentred",
                     "case": "Original"
                   },
                   "type": "Value",
@@ -8812,7 +8812,7 @@
                 "showWhenDataModelInvalid": "Show",
                 "whenVisible": "Always",
                 "boundsType": "Absolute",
-                "bounds": "90 209 560 38"
+                "bounds": "70 207 580 38"
               }
             },
             {
