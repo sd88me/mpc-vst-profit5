@@ -320,6 +320,8 @@ def keyboard(p):
     d.rounded_rectangle((42, 14, 1238, 614), 10, outline=(234, 234, 228), width=2)
     d.text((76, 52), "FAVOURITE NAME", font=font(20), fill=(234, 234, 228), anchor="lm")
     d.rounded_rectangle((300, 26, 1210, 80), 6, fill=(34, 34, 37), outline=(255, 46, 38), width=2)
+    max_chars = int(re.search(r"kFavNameMax = (\d+)", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../src/params_gen.h")).read()).group(1))   # the limit the plugin enforces
+    d.text((1196, 53), "MAX %d CHARACTERS" % max_chars, font=font(16), fill=(150, 150, 146), anchor="rm")
     p.kids.append(entry("kb panel", "Image", {"version": 2, "imageType": "Regular", "colour": "0", "image": save(panel, "kb_panel.png")},
                         "0 0 1280 628", ind=ind))
     p.kids.append(label(B(316, 26, 880, 54), P("fav_name"), h=32.0, style="Bold", just="left verticallyCentred"))
