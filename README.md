@@ -58,6 +58,49 @@ and quality stay as you set them. `.syx` dumps are not read yet.
 
 Then add **Profit-5** to a track from the plugin browser. Upgrading keeps your `banks` folder and favourites; old projects keep their sound.
 
+## Backing up your favourites and sounds
+
+Your favourites and your own files are kept in the plugin folder on the MPC, not in your projects (a project keeps only the sound its
+track uses). Back them up before you update the plugin or MPC OS, reset the device, or move to another MPC. These are the files to keep,
+inside the plugin folder `sd88me - VST - Profit-5`:
+
+| File or folder | What it holds |
+|---|---|
+| `profit5-favourites.dat` | your favourites (+FAV) |
+| `banks/` | your imported Repro-5 patches |
+
+### Where the plugin folder is
+It is in `VST2 Plugins` on one of the MPC's drives, or in a Synths folder (`/sdcard/Synths`, or `/nvme/Synths` on a Live III),
+depending on how Profit-5 was installed. Over SSH (root access), this prints its path:
+
+```bash
+ssh root@<device-ip> 'find /sdcard /nvme /media -maxdepth 3 -type d -name "sd88me - VST - Profit-5" 2>/dev/null'
+```
+
+### Backing up
+- **The plugin folder is on an SD card or USB drive:** plug the drive into a computer and copy the files above to it.
+- **Over SSH**, from a computer: this copies the whole plugin folder into one file, `profit5-backup.tar`. Put the folder that holds the
+  plugin folder (the path above without its last part) in place of `<parent folder>`:
+
+  ```bash
+  ssh root@<device-ip> 'cd "<parent folder>" && tar cf - "sd88me - VST - Profit-5"' > profit5-backup.tar
+  ```
+
+### Restoring
+Install Profit-5 first (on the new device, or after the reset or update), then put back only the files above. Don't copy the whole
+old folder over the new one: that would put the old version of the plugin back too.
+
+- **From a drive:** copy the files back to the same places in the new plugin folder.
+- **Over SSH:** unpack the backup on your computer and send the files back. List only the ones your backup has, and put the new
+  plugin folder's path (found as above) in place of `<plugin folder>`:
+
+  ```bash
+  mkdir profit5-backup && tar xf profit5-backup.tar -C profit5-backup
+  tar cf - -C "profit5-backup/sd88me - VST - Profit-5" "profit5-favourites.dat" "banks" | ssh root@<device-ip> 'cd "<plugin folder>" && tar xf -'
+  ```
+
+Then remove Profit-5 from its tracks and add it again (or reopen the project), so it reads the restored files.
+
 ## What you get
 
 - **Five voices**, each with two oscillators, a mixer, a four-pole lowpass and an amplifier. Poly (1 to 5 voices, round-robin with oldest-note
