@@ -37,6 +37,7 @@ The device is shared with your live setup. Save your project first; the installe
 - **Touch boxes:** `gen_vst.py` prints "TOUCH ... overlap"; the knob box size is `bw` in `make_skin.py`.
 
 ## 3. Open engine work (in order of value)
+See also `docs/ROADMAP-accuracy.md`: what can be derived without a recording (the filter as a circuit, service-manual checks, the patch sheets as reference data).
 1. **Fit the guessed laws to a recording of a real unit** (listed in `docs/ENGINE.md`): envelope and LFO anchors, cutoff span and keyboard scaling, resonance law,
    Poly-Mod and Wheel-Mod depths, mixer level, glide range, unison detune.
 2. **The three unread summer inputs** (412k, 182k, 2.21M on the master summers, `docs/ENGINE.md`): need a clearer scan or wire tracing. They set the filter and PW modulation depths.
