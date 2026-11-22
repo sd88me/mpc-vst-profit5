@@ -185,7 +185,7 @@ static void p5_set_param(void *h, const char *k, const char *val) {
     if (!strcmp(k, "preset")) { load_slot(s, atoi(val)); return; }
     if (!strcmp(k, "user")) { if (atoi(val) >= 1) load_slot(s, nfactory() + atoi(val) - 1); return; }   /* 0.2.0's knob; 0 left the sound as it was */
     if (!strcmp(k, "state")) {
-        /* "P5A <preset> v0 v1 ... v<P5P_COUNT-1>" (each value 0..1) */
+        /* "P5A <preset> v0 v1 ... v<P5P_COUNT-1> [U<n>] [m<n>]" (each value 0..1; U: 0.2.0 import; m: model version, absent = 0) */
         const char *p = val;
         int n = 0, pre = 0;
         if (sscanf(p, "P5A %d%n", &pre, &n) < 1) return;
@@ -199,9 +199,17 @@ static void p5_set_param(void *h, const char *k, const char *val) {
             p = end;
         }
         if (got < P5P_COUNT_V1) return;         /* a short or damaged state changes nothing; a 0.1.x state has P5P_COUNT_V1 values */
-        while (*p == ' ') p++;
-        if (*p == 'U') user = atoi(p + 1);
+        int model = 0;                          /* a state without "m<n>" was saved by 2.0.0 or earlier: keep the 2.0.0 laws */
+        for (;;) {
+            while (*p == ' ') p++;
+            if (*p == 'U') user = atoi(p + 1);
+            else if (*p == 'm') model = atoi(p + 1);
+            else break;
+            while (*p && *p != ' ') p++;
+        }
+        s->e.model = model < 0 ? 0 : model > P5_MODEL_LATEST ? P5_MODEL_LATEST : model;
         for (int i = 0; i < got; i++) p5_set(&s->e, i, v[i]);
+        p5_set(&s->e, P5P_REV, s->e.p[P5P_REV]);   /* recompute what depends on the model (envelope coefficients) */
         if (user > 0) pre = nfactory() + user - 1;       /* a 0.2.0 state: factory program + imported patch number */
         s->preset = pre >= 0 && pre < P5_SLOTS ? pre : 0;
         s->display_rev++;
@@ -225,6 +233,7 @@ static int p5_get_param(void *h, const char *k, char *b, int n) {
     if (!strcmp(k, "state")) {
         int w = snprintf(b, (size_t)n, "P5A %d", s->preset);
         for (int i = 0; i < P5P_COUNT && w < n; i++) w += snprintf(b + w, (size_t)(n - w), " %.5g", s->e.p[i]);
+        if (s->e.model > 0 && w < n) w += snprintf(b + w, (size_t)(n - w), " m%d", s->e.model);   /* absent = 0; 2.0.0 stops at the first non-number */
         return w < n ? w + 1 : 0;
     }
     int i = find(k);

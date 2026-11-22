@@ -62,7 +62,11 @@ typedef struct {
     int ctl;                            /* control-rate counter */
     float pink, pink_c;
     uint32_t diag_nan;
+    int model;                          /* model version (docs/improvements.md): 0 = the 2.0.0 laws, kept for old projects; new
+                                           instances get P5_MODEL_LATEST. Saved in the state string as "m<n>" */
 } p5_engine_t;
+
+#define P5_MODEL_LATEST 1
 
 void p5_init(p5_engine_t *e, float fs);
 void p5_set(p5_engine_t *e, int id, float v);

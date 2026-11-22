@@ -11,6 +11,9 @@
 
 #define C0_HZ 16.3516f      /* frequency 0 puts the lowest key on C0 (manual 4.1-4.3) */
 #define KEY_LOW 36          /* MIDI note of the lowest key */
+/* model 1 filter trim (manual 4-17, the INIT FREQ trim R407): octaves added so the Rev 2 filter rings at 440 Hz on C3 at cutoff
+ * 3.083 V and full resonance; set by tools/service_check.c (its 4-17 case) */
+#define CUT_TRIM 0.0601f    /* log2(440 / 422.05): untrimmed, C3 rang at 422.05 Hz (2026-11-22) */
 #define CTL_MASK 15         /* control-rate work every 16 internal samples */
 
 /* ---- voicing constants per revision (docs/ENGINE.md, "Rev 2 / Rev 4") ---- */
@@ -45,6 +48,8 @@ static inline float rnd(uint32_t *r) { *r = *r * 1664525u + 1013904223u; return 
 
 static inline int sw(const p5_engine_t *e, int id) { return e->p[id] >= 0.5f; }
 static inline const p5_rev_t *rev(const p5_engine_t *e) { return &REV[sw(e, P5P_REV)]; }
+/* model 1 laws, derived from the Rev 2 schematics and the service manual (docs/CIRCUIT.md); Rev 4 keeps the 2.0.0 laws for now */
+static inline int circ(const p5_engine_t *e) { return e->model >= 1 && !sw(e, P5P_REV); }
 
 /* pot -> CV: Rev 2 quantises to the DAC's 121 steps (manual 3.3: 1/12 V steps, 10 V full scale) */
 static inline float pot(const p5_engine_t *e, int id) { return rev(e)->cv_steps ? ma_cv_quant(e->p[id], 121) : e->p[id]; }
@@ -58,9 +63,24 @@ static inline float env_tau(float d) { float t = 0.0005f * powf(10.0f, 5.333f * 
 #define ATK(d) (1.4663f * env_tau(d))
 #define DEC(d) (4.6f * env_tau(d))
 
+/* Model 1 (Rev 2): SSM 2050 with C = 0.1 uF, 2 V per decade through 100k (datasheet), the time CVs x1.1 (SD313 "ENV GEN S/H GAIN
+ * MODIF", S/N 590 and up) and the TC trim set so an attack CV of 6.250 V gives a 0.9 s attack (manual 4-10, 4-11). So the attack
+ * period is 0.9 s x 10^(0.55 (V - 6.25)), V = pot volts; tau = period / 1.4663, limited to the 2050's typical 1 ms .. 100 s. */
+static inline float env_tau_c(float d) {
+    float t = (0.9f / 1.4663f) * powf(10.0f, 0.55f * (10 * d - 6.25f));
+    return t < 0.001f / 1.4663f ? 0.001f / 1.4663f : t > 100.0f / 1.4663f ? 100.0f / 1.4663f : t;
+}
+
 static void env_coefs(p5_engine_t *e) {
     const p5_rev_t *r = rev(e);
     float rel = sw(e, P5P_RELEASE);
+    if (circ(e)) {
+#define ATKC(d) (1.4663f * env_tau_c(d))
+#define DECC(d) (4.6f * env_tau_c(d))
+        ma_env_set(&e->fk, ATKC(pot(e, P5P_F_A)), DECC(pot(e, P5P_F_D)), pot(e, P5P_F_S), rel ? DECC(pot(e, P5P_F_R)) : 0.005f, 1.3f, e->fsi);
+        ma_env_set(&e->ak, ATKC(pot(e, P5P_A_A)), DECC(pot(e, P5P_A_D)), pot(e, P5P_A_S), rel ? DECC(pot(e, P5P_A_R)) : 0.005f, 1.3f, e->fsi);
+        return;
+    }
     ma_env_set(&e->fk, ATK(pot(e, P5P_F_A)) * r->atk_scale, DEC(pot(e, P5P_F_D)) * r->dec_scale, pot(e, P5P_F_S),
                rel ? DEC(pot(e, P5P_F_R)) * r->dec_scale : 0.005f, 1.3f, e->fsi);
     ma_env_set(&e->ak, ATK(pot(e, P5P_A_A)) * r->atk_scale, DEC(pot(e, P5P_A_D)) * r->dec_scale, pot(e, P5P_A_S),
@@ -94,6 +114,7 @@ void p5_init(p5_engine_t *e, float fs) {
     e->p[P5P_NVOICES] = 1.0f;
     e->p[P5P_QUALITY] = 1.0f;
     e->p[P5P_RELEASE] = 1.0f;
+    e->model = P5_MODEL_LATEST;
     p5_load_factory(e, 0);
     set_rate(e);
 }
@@ -208,7 +229,9 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     const float vint = e->p[P5P_VINTAGE];
     const float tune = (e->p[P5P_TUNE] - 0.5f) * 2 + e->bend * 2;           /* +-1 semitone tune, +-2 bend (assumption) */
     const float a_semis = semis_pot(e, P5P_A_FREQ), b_semis = semis_pot(e, P5P_B_FREQ);
-    const float b_fine = pot(e, P5P_B_FINE);                                  /* 0..+1 semitone (user report 2026-10-28: the original spans about a semitone) */
+    const int cm = circ(e);
+    /* fine: model 1 = R3107 10M into 100k, 0.01 x 10 V = 1.2 semitones (SD312); model 0 = 1 semitone (user report 2026-10-28) */
+    const float b_fine = pot(e, P5P_B_FINE) * (cm ? 1.2f : 1.0f);                                  /* 0..+1 semitone (user report 2026-10-28: the original spans about a semitone) */
     const int a_saw = sw(e, P5P_A_SAW), a_pul = sw(e, P5P_A_PULSE), sync = sw(e, P5P_A_SYNC);
     const int b_saw = sw(e, P5P_B_SAW), b_tri = sw(e, P5P_B_TRI), b_pul = sw(e, P5P_B_PULSE), b_lo = sw(e, P5P_B_LO), b_kbd = sw(e, P5P_B_KBD);
     const int pm_fa = sw(e, P5P_PM_DEST_FA), pm_pw = sw(e, P5P_PM_DEST_PWA), pm_fi = sw(e, P5P_PM_DEST_FILT);
@@ -262,7 +285,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 float sa = x->semis + a_semis + tune + cents_a * 0.01f + (pm_fa ? 48 * pm_src + 24 * pm_b : 0) + (wm_fa ? 4 * wm : 0);
                 float sb = (b_kbd ? x->semis : 0) + b_semis + b_fine + tune + cents_b * 0.01f + (wm_fb ? 4 * wm : 0);
                 float hz_a = vco_hz(r, C0_HZ * fexp2(sa * (1.0f / 12)), x->tol[2]);
-                float hz_b = C0_HZ * fexp2(sb * (1.0f / 12)) * (b_lo ? (1.0f / 128) : 1.0f);
+                float hz_b = C0_HZ * fexp2(sb * (1.0f / 12)) * (b_lo ? (cm ? 1.0f / 32 : 1.0f / 128) : 1.0f);   /* LO: model 1 = 5 octaves (SD312 divider), 0 = 7 */
                 if (!b_lo) hz_b = vco_hz(r, hz_b, x->tol[3]);
                 float inc_a = clampf(hz_a * inv, 0, 0.45f), inc_b = clampf(hz_b * inv, 0, 0.45f);
                 float pw_a = clampf(c[6] + (pm_pw ? 0.5f * (pm_src + pm_b) : 0) + (wm_pwa ? 0.4f * wm : 0), 0, 1);
@@ -294,7 +317,9 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 /* mixer (2020 VCAs) */
                 float in = 0.45f * (c[3] * oa + c[4] * ob + c[5] * white * 0.8f);
                 /* cutoff: 450 Hz at pot 6 on the lowest key with KBD on (manual 3.4), 10.5 octaves over the pot (assumption) */
-                float oct = 10.5f * (c[0] - 0.6f) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + 8 * c[2] * fe
+                /* model 1: 10 octaves over the pot (FILT SUM CV 0-10 V at ~1 oct/V, SD312 / SD411) and trimmed as manual 4-17: cutoff
+                 * CV 3.083 V on C3 (36 semitones up) rings at 440 Hz; CUT_TRIM is the 2040 model's ring / cutoff ratio at full resonance */
+                float oct = (cm ? 10.0f * (c[0] - 37 / 120.0f) - 3 - 0.03242f + CUT_TRIM : 10.5f * (c[0] - 0.6f)) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + 8 * c[2] * fe
                           + (pm_fi ? 6 * pm_src + 5 * pm_b : 0) + (wm_fi ? 3 * wm : 0) + at_f * 3 * x->press
                           + vint * (r->drift_cut_oct * x->dr[2] + r->tol_cut_oct * x->tol[5]);
                 float hz = clampf(450.0f * fexp2(oct), 8, 0.4f * fsi);
