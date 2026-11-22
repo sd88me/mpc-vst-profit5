@@ -13,5 +13,10 @@ the private folder `~/roms/prophet-5/` on the development machine. Page numbers 
 | `datasheets/SSM2030.pdf` | d58fb72c9b45ca1f6f8971d6df86684f5dfb1610 | SSM 2030 VCO, Aug 1977, 2 pp | supplied by the user, 2026-11-22 |
 | `datasheets/SSM2030-emu.pdf` | 99cf46ce6b5ca6228fb40cc931ce8b4ed0b1c8ba | SSM 2030 (E-mu document), 4 pp; not read yet | supplied by the user, 2026-11-22 |
 | `datasheets/SSM2050.pdf` | a2eb00a7ebfef17fd8b03be0c8ce0027472d979e | SSM 2050 transient generator, 2 pp: 100 ms at 0 V with 0.1 uF, +18 mV/oct, 2 V/decade via 100k | supplied by the user, 2026-11-22 |
+| `Sequential Circuits Prophet 5 Rev 2.0 v7.0c/p5_v7.0c_0.bin` | c764358b74285d3e0082d6138b21b909fc2aa060 | Rev 2 firmware v7.0c, 2708 image 0 (each 1 KB, doubled) | the user's dump, supplied 2026-11-22 |
+| `Sequential Circuits Prophet 5 Rev 2.0 v7.0c/p5_v7.0c_1.bin` | 974f18c5a90887293ab90dbeac3794d7d5b3f7fe | image 1 | as above |
+| `Sequential Circuits Prophet 5 Rev 2.0 v7.0c/p5_v7.0c_2.bin` | e84c34ccfad8863137bbb098d5c74e40808e64f6 | image 2 | as above |
+| `Sequential Circuits Prophet-5 3.0 V8.1/` | v81_2732.bin b58aac3a69dda5c8ab459d9769e04065836f2e8b; bank0-2 915c4648..., 81f958f1..., a5993436...; p5diags.bin ef2cf8d1a25aa91380a16c6e454a5a04ab7b3014 | Rev 3.0 firmware V8.1 and diagnostics | the user's dumps, supplied 2026-11-22 |
+| https://maffez.com/?page_id=3556 | (web page, read 2026-11-22) | Rev 4 notes: SSI2140 and CEM3320 both fitted, SSI2164 VCAs, Q-compensation, DC blocking, part designators | public page |
 
 Wanted: free recordings of real Rev 2 units (none yet).

@@ -56,6 +56,13 @@ Rev 1 service manual (serials 0001-0182, board 4 dated 6/19/78). These are layou
   - osc B saw, osc B triangle, osc B pulse, sync, W-Mod freq A, LO FREQ
 - This is the Rev 1 board. v7.0 uses a different port map, so these are not taken as the firmware's bit order.
 
+## S&H refresh (re-read 2026-11-22, offline)
+- `sub_0391` (0x0391) writes RAM values unchanged to the DAC (port 0x20) and strobes the S&H address (ports 0x33 / 0x38), eight addresses a call.
+- `sub_0380` (0x0380) is the only place a pot is changed on its way out: indices **0x12 / 0x13** (osc A / B frequency) become 0x3F - v/2
+  (halved and inverted; the master summer inverts them back), and indices **0x03 / 0x07** become a fixed **0x14** (20 steps, 1.667 V) unless
+  switch bit 0x103A.6 is set or the footswitch input (port 0x03 bit 2) allows them: the RELEASE switch, so 0x03 and 0x07 are the two
+  release pots. Every other pot, the LFO's included, reaches its S&H as read (0-10 V).
+
 ## Still open
 - Pot-to-index map for indices 0-23 (only 0x12/0x13 = osc A/B frequency are certain), and the switch latch bits. The Rev 1 board 3 interface
   (page 2) confirms a 7-bit DAC (4042 latches) and a 7-bit ADC with a "tune interrupt latch" on NMI. But its port decoding (CS0-CS10 from a 74LS138 and a

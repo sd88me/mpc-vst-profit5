@@ -25,7 +25,8 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
 ## Known differences (circuit against engine), in proposed order
 1. **Force CPU:** model 1's Rev 2 in High is 36.2 % at five voices (2.0.0: 28.4 %), over the 30 % budget; Eco is 18.1 %. The Live III
    is far inside (10.7 %). The owner's call after listening: Eco on the Force, or a CPU round.
-2. **The LFO's rate and Wheel-Mod depths** (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the LFO as read on SD312 (13 octaves,
+2. **The LFO's rate and Wheel-Mod depths** (owner's call, 2026-11-22: the Rev 2 circuit, confirmed by the parts list and the firmware, makes
+   the LFO 0.002-21 Hz and the sheets' 6.5 0.83 Hz; keep 2.0.0's law for the sheets' sake, or follow the circuit) (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the LFO as read on SD312 (13 octaves,
    0.002-21 Hz) contradicts the factory sheets (5-5 Helicopter would chop at 1.3 Hz); the gap is probably in the CV path upstream (firmware
    or S&H scaling). Waits on the firmware's handling of LFO FREQ, or a recording. The engine keeps the 2.0.0 Wheel-Mod and LFO.
 7. **Autotune** uses four bias CVs per oscillator by range (manual 2-19); the engine has one static residual.
@@ -73,6 +74,10 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   The LFO reading was checked at 3x and against the sheets (above, item 2): left at model 0. Check set: model 0 304/304 identical, Rev 4
   identical, service 0 failed, corners 256/0, SPICE 20/0, engine test (now also: no poly glide in model 1, poly glide kept in model 0) and
   host test OK.
+- **2026-11-22, round 5 (model 1, Rev 2 only; offline):** the firmware (v7.0c, `sub_0380`) pins both release CVs to 1.667 V when RELEASE is
+  off: release 8.5 ms to -40 dB under the 2050 law (model 0: 5 ms). The LFO checked against the parts list, the firmware and the pot
+  tapers: the circuit reading stands (item 2). Check set: model 0 304/304 identical, Rev 4 identical, service 0 failed, corners 256/0,
+  engine and host tests OK.
 - **2026-11-22: installed for listening** as "Profit-5 2 Beta" (uid Pf5B, `./build.sh beta`, next to the 2.0.0 release) on the Force
   (/sdcard/Synths, its pluginList-arm entry added, MPC.settings backed up as MPC.settings.bak-p5beta-20261122) and the Live III
   (/nvme/VST2 Plugins). MPC restarted on both; no plugin errors in the log. Not yet heard.

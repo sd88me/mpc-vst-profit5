@@ -80,8 +80,11 @@ static void env_coefs(p5_engine_t *e) {
     if (circ(e)) {
 #define ATKC(d) (1.4663f * env_tau_c(d))
 #define DECC(d) (4.6f * env_tau_c(d))
-        ma_env_set(&e->fk, ATKC(pot(e, P5P_F_A)), DECC(pot(e, P5P_F_D)), pot(e, P5P_F_S), rel ? DECC(pot(e, P5P_F_R)) : 0.005f, 1.3f, e->fsi);
-        ma_env_set(&e->ak, ATKC(pot(e, P5P_A_A)), DECC(pot(e, P5P_A_D)), pot(e, P5P_A_S), rel ? DECC(pot(e, P5P_A_R)) : 0.005f, 1.3f, e->fsi);
+        /* RELEASE off: the firmware writes 0x14 (20 steps, 1.667 V) to both release S&Hs instead of the pots (v7.0c 0x0380, pot
+         * indices 3 and 7, switch bit 0x103A.6 or the footswitch) */
+        const float roff = DECC(20 / 120.0f);
+        ma_env_set(&e->fk, ATKC(pot(e, P5P_F_A)), DECC(pot(e, P5P_F_D)), pot(e, P5P_F_S), rel ? DECC(pot(e, P5P_F_R)) : roff, 1.3f, e->fsi);
+        ma_env_set(&e->ak, ATKC(pot(e, P5P_A_A)), DECC(pot(e, P5P_A_D)), pot(e, P5P_A_S), rel ? DECC(pot(e, P5P_A_R)) : roff, 1.3f, e->fsi);
         return;
     }
     ma_env_set(&e->fk, ATK(pot(e, P5P_F_A)) * r->atk_scale, DEC(pot(e, P5P_F_D)) * r->dec_scale, pot(e, P5P_F_S),

@@ -156,6 +156,11 @@ against a recording.
   5-5 Helicopter (LFO 7) would chop at 1.3 Hz, 4-6 Random Arpeggiator (3.5) step at 0.05 Hz, 4-4 and 5-1 (2) at 0.01 Hz; the model 0
   law (0.5 Hz x 2^(5.33 x pot)) gives 6.6, 1.8 and 1.1 Hz. The gap is likely upstream of U372 (the firmware's or the S&H's scaling of
   LFO FREQ CV; only the oscillator FREQ pots are known to be halved). **Open**; the engine keeps its LFO.
+  Checked further (2026-11-22): the parts list (Section 6, PDF p. 129) gives R368 75k, R370 / R371 100k, R377 54.9k, R381 1k, R382 2.21M,
+  C335 .01 uF poly, and every panel pot as 100k linear (R101-R113, R201-R213); the firmware passes the LFO pot to its S&H unchanged
+  (`docs/FIRMWARE.md`); and the same frequency formula (I_ref / (C x 10 V)) puts the VCO's lowest key near C0, as manual 4.2 says. So a
+  Rev 2 LFO spans about 13.3 octaves, 0.002-21 Hz, 0.83 Hz at 6.5. The factory sheets (1978) were written on Rev 1 units, whose board 3
+  may have differed; that is the likeliest reason they disagree.
 - The LFO's shapes: saw and pulse through 4066s and R385 / R386 10k, the triangle by a converter (U372, R365 10k, R355 / R362 20k, R369 15k).
 
 ## Open
