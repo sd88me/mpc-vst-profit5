@@ -95,6 +95,7 @@ static void set_rate(p5_engine_t *e) {
     e->fsi = e->fs * e->os;
     e->pink_c = 1 - expf(-6.2831853f * 159.0f / e->fsi);
     e->hp16 = ftan(3.14159265f * 15.915f / e->fsi);           /* C413 / R471 */
+    e->hp8 = 1 - expf(-6.2831853f * 7.96f / e->fsi);           /* C409 / R481, C408 / R439: the mixer inputs' coupling */
     for (int i = 0; i < 10; i++) ma_cv_init(&e->cv[i], 0.002f, e->fsi);    /* S&H + CV filter RC, about 2 ms */
     for (int v = 0; v < P5_VOICES; v++)
         for (int d = 0; d < 3; d++) ma_drift_init(&e->v[v].drift[d], 7 * v + d + 1, e->fsi / (CTL_MASK + 1));
@@ -275,6 +276,12 @@ void p5_render(p5_engine_t *e, float *out, int n) {
             if (cm && ctl) {   /* model 1: the 2020s' control currents (mixer 39k, resonance 30k), at the control rate */
                 for (int k = 0; k < 3; k++) e->vca[k] = ma_2020_ctl(10 * c[3 + k], 39e3f) * (39e3f * 0.02906f);
                 e->vca[3] = ma_2020_ctl(10 * c[1], 30e3f) * (1e4f / 14);
+                /* Poly-Mod (SD411 voice 3/4: P-MOD OSC B AMT VCA, control 75k; P-MOD FILT ENV AMT VCA, control 39k; their currents into
+                 * R432 47k): volts on the P-MOD bus per volt of osc B node X and per volt of filter envelope. FILT ENV AMT VCA (control
+                 * 62k): its current into the cutoff summer's virtual ground, in octaves (x 100k) per envelope volt. */
+                e->vca[4] = ma_2020_ctl(10 * c[9], 75e3f) * (47e3f / 14);
+                e->vca[5] = ma_2020_ctl(10 * c[8], 39e3f) * (47e3f / 14);
+                e->vca[6] = ma_2020_ctl(10 * c[2], 62e3f) * (1e5f / 14);
             }
             const float k = 4.4f * c[1];
             float sum = 0;
@@ -290,22 +297,38 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 float cents_b = vint * (r->drift_cents * x->dr[1] + r->bias_cents * x->tol[1]);
                 float pm_src = c[8] * fe;                                           /* filter-env part of poly-mod */
                 float pm_b = c[9] * x->out_b;                                       /* osc B part (audio rate) */
-                float sa = x->semis + a_semis + tune + cents_a * 0.01f + (pm_fa ? 48 * pm_src + 24 * pm_b : 0) + (wm_fa ? 4 * wm : 0);
+                /* model 1: the P-MOD bus (U427 follower of R432, +-13.5 V), from osc B's node X of the last sample (DC included) */
+                const float vpm = cm ? clampf(e->vca[4] * x->pmx + e->vca[5] * 10 * fe, -13.5f, 13.5f) : 0;
+                float sa = x->semis + a_semis + tune + cents_a * 0.01f + (pm_fa ? (cm ? 4 * vpm : 48 * pm_src + 24 * pm_b) : 0) + (wm_fa ? 4 * wm : 0);
                 float sb = (b_kbd ? x->semis : 0) + b_semis + b_fine + tune + cents_b * 0.01f + (wm_fb ? 4 * wm : 0);
                 float hz_a = vco_hz(r, C0_HZ * fexp2(sa * (1.0f / 12)), x->tol[2]);
                 float hz_b = C0_HZ * fexp2(sb * (1.0f / 12)) * (b_lo ? (cm ? 1.0f / 32 : 1.0f / 128) : 1.0f);   /* LO: model 1 = 5 octaves (SD312 divider), 0 = 7 */
                 if (!b_lo) hz_b = vco_hz(r, hz_b, x->tol[3]);
                 float inc_a = clampf(hz_a * inv, 0, 0.45f), inc_b = clampf(hz_b * inv, 0, 0.45f);
-                float pw_a = clampf(c[6] + (pm_pw ? 0.5f * (pm_src + pm_b) : 0) + (wm_pwa ? 0.4f * wm : 0), 0, 1);
+                float pw_a = clampf(c[6] + (pm_pw ? (cm ? 0.332f * vpm : 0.5f * (pm_src + pm_b)) : 0) + (wm_pwa ? 0.4f * wm : 0), 0, 1);
                 float pw_b = clampf(c[7] + (wm_pwb ? 0.4f * wm : 0), 0, 1);
                 /* osc B (master) */
                 float pb = x->ph[1] + inc_b, ob = 0;
                 int wrap = pb >= 1;
                 if (wrap) pb -= 1;
                 x->ph[1] = pb;
-                if (b_saw) ob += saw_bow(ma_osc_saw(pb, inc_b), r->saw_bow);
-                if (b_tri) ob += tri_b(pb, inc_b, r->tri_sym * x->tol[4], r->tri_glitch);
-                if (b_pul) ob += r->pulse_amp * ma_osc(MA_PULSE, pb, inc_b, pw_b);
+                float bs = b_saw ? saw_bow(ma_osc_saw(pb, inc_b), r->saw_bow) : 0;
+                float bt = b_tri ? tri_b(pb, inc_b, r->tri_sym * x->tol[4], r->tri_glitch) : 0;
+                float bp = b_pul ? r->pulse_amp * ma_osc(MA_PULSE, pb, inc_b, pw_b) : 0;
+                if (b_saw) ob += bs;
+                if (b_tri) ob += bt;
+                if (b_pul) ob += bp;
+                if (cm) {
+                    /* model 1, osc B's output network (SD411, voices 3/4): saw (0..10 V) and pulse (-1.4..6.2 V) through 10k each into
+                     * R434 200k and the U442 buffer, then R438 10k to node X; the triangle (+-5 V) into X through R433 3.3k. X feeds the
+                     * P-MOD OSC B VCA (DC coupled) and, through C408 / 200k (8 Hz), the mixer VCA */
+                    int m = b_saw + b_pul;
+                    float yb = m ? (5 * (bs + bp) + 5.0f * b_saw + 2.4f * b_pul) / (m + 0.05f) : 0;
+                    float xb = b_tri ? 0.2481f * yb + 0.7519f * 5 * bt : yb;
+                    x->pmx = xb;
+                    x->hpb += e->hp8 * (xb - x->hpb);
+                    x->mixb = (xb - x->hpb) * (b_tri ? 0.988f : 0.952f);
+                }
                 x->out_b = ob;
                 /* osc A (slave), shapes summed; sync resets it when B wraps */
                 float pa = x->ph[0] + inc_a;
@@ -322,13 +345,21 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                     pa = inc_a * d;
                 }
                 x->ph[0] = pa;
+                if (cm) {
+                    /* model 1, osc A's output network: saw and pulse through 10k each (R456, R457) into C409 / R481 200k (8 Hz): the
+                     * shapes average (1 / (n + 0.05) each) rather than add */
+                    int na = a_saw + a_pul;
+                    float va = na ? (5 * oa + 5.0f * a_saw + 2.4f * a_pul) / (na + 0.05f) : 0;
+                    x->hpa += e->hp8 * (va - x->hpa);
+                    x->mixa = va - x->hpa;
+                }
                 /* mixer (2020 VCAs) */
                 float in = 0.45f * (c[3] * oa + c[4] * ob + c[5] * white * 0.8f);
                 /* cutoff: 450 Hz at pot 6 on the lowest key with KBD on (manual 3.4), 10.5 octaves over the pot (assumption) */
                 /* model 1: 10 octaves over the pot (FILT SUM CV 0-10 V at ~1 oct/V, SD312 / SD411) and trimmed as manual 4-17: cutoff
                  * CV 3.083 V on C3 (36 semitones up) rings at 440 Hz; CUT_TRIM is the 2040 model's ring / cutoff ratio at full resonance */
-                float oct = (cm ? 10.0f * (c[0] - 37 / 120.0f) - 3 - 0.03242f : 10.5f * (c[0] - 0.6f)) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + 8 * c[2] * fe
-                          + (pm_fi ? 6 * pm_src + 5 * pm_b : 0) + (wm_fi ? 3 * wm : 0) + at_f * 3 * x->press
+                float oct = (cm ? 10.0f * (c[0] - 37 / 120.0f) - 3 - 0.03242f : 10.5f * (c[0] - 0.6f)) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + (cm ? e->vca[6] * 10 * fe : 8 * c[2] * fe)
+                          + (pm_fi ? (cm ? 1.821f * vpm : 6 * pm_src + 5 * pm_b) : 0) + (wm_fi ? 3 * wm : 0) + at_f * 3 * x->press
                           + vint * (r->drift_cut_oct * x->dr[2] + r->tol_cut_oct * x->tol[5]);
                 if (cm) oct = CUT_KV * oct + CUT_TRIM;    /* R406 V/OCT and R407 INIT FREQ, trimmed as manual 4-17 */
                 float hz = clampf(450.0f * fexp2(oct), 8, 0.4f * fsi);
@@ -339,7 +370,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                      * 39k x I_c per unit of osc (0.272 V for one osc at 10). Noise keeps its 2.0.0 level against the oscillators (its
                      * source level is not read yet). The resonance VCA: kres = 10k I_c / 14, I_c through 30k. Circuit noise (about 10 uV)
                      * starts the self-oscillation. e->vca[] is updated at the control rate. */
-                    float xin = e->vca[0] * oa + e->vca[1] * ob + e->vca[2] * white * 0.8f + 1e-5f * rnd(&e->rng);
+                    float xin = (e->vca[0] * x->mixa + e->vca[1] * x->mixb) * (1 / 4.76f) + e->vca[2] * white * 0.8f + 1e-5f * rnd(&e->rng);
                     float kr = e->vca[3];
                     float h = ma_vcf2040(&x->vcf, ftan(3.14159265f * hz * inv), e->hp16, kr, xin, &e->diag_unconv);
                     if (!(h == h) || fabsf(h) > 20) { memset(&x->vcf, 0, sizeof x->vcf); e->diag_nan++; h = 0; }

@@ -12,6 +12,8 @@ service manual, in the Lemus method (`docs/ROADMAP-accuracy.md`, `docs/CIRCUIT.m
 - Envelopes: SSM 2050 at 2 V per decade, the x1.1 S&H modification, 0.9 s attack at 6.250 V (4-10, 4-11), 1 ms .. 100 s.
 - The filter section as a circuit (`ma_vcf2040`, checked against ngspice in `tools/spice_check.py`), with the mixer and resonance levels
   from the SSM 2020s' control ports (`ma_2020_ctl`).
+- The oscillators' output networks (shapes average; the triangle into osc B's node X through 3.3k; 8 Hz coupling into the mixer).
+- Poly-Mod and the filter envelope amount through their SSM 2020s (`docs/CIRCUIT.md`, round 3). Wheel-Mod and the LFO keep model 0's laws.
 Rev 4 keeps the model 0 laws.
 
 ## Rev 2 / Rev 4 switch (`P5P_REV`)

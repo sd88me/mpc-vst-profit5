@@ -120,8 +120,41 @@ against a recording.
 | Envelope time CVs | 2 V/decade x1.1, offset trimmed to 0.9 s at 6.250 V, C = 0.1 uF | model 1 | done (round 1) |
 | VCO V/oct trim range | divider 20.0 mV/V; summer x0.909-0.959: 1.02-1.08 oct/V at 25 C, never 1.00 | 1.000 | **open**: a misread or a missing factor; check the parts list and the 2030 sheet |
 
+## Round 3 reading (2026-11-22, voices 3 and 4, SD412-SD415, PDF pp 89-102; SD312 left half, PDF p. 75)
+
+### Oscillator output networks (2030 levels from the E-mu SSM 2030 sheet, p. 4: saw 0 to +10 V; pin 5 "half a sawtooth"; pulse -1.4 to +6.2 V)
+- Osc A: saw (R453 22k load) and pulse (R454 22k) through 4016s and R456 / R457 10k to one node, C409 0.1 uF, R481 200k into the MIX OSC A
+  VCA. The shapes average: each 1 / (n + 0.05) of itself (n shapes on), 0.952 for one. AC coupled at 7.96 Hz.
+- Osc B: saw and pulse through 4016s and R436 / R435 10k into R434 200k and the U442 (TL082) buffer, then **R438 10k to node X**. The
+  triangle (U462, the datasheet's triangle converter: 4h - 2 saw - 15 = +-5 V, with R445 10k, R446 / R447 20k, R489 15k, R487 7.5k,
+  TRI SYM R413 via R488 47k) through a 13202 and **R433 3.3k into node X** (voice 4 shows the junction). With the triangle on, X is
+  0.248 of the buffer plus 0.752 of the triangle. X feeds the P-MOD OSC B VCA's +SIG directly (DC coupled) and the MIX OSC B VCA through
+  C408 0.1 uF / R439 200k (8 Hz).
+- So Poly-Mod from osc B carries the selected shapes' DC (a saw averages +4.76 V at X): raising P-MOD OSC B with a saw or pulse raises
+  osc A's pitch. Manual 4-14 trims the VCA's balance with osc B's shapes all off (Table 4-0), so the trim does not remove it.
+
+### Poly-Mod and filter envelope amount (voices 3, 4)
+- P-MOD OSC B AMT VCA (1/2 U421-U422): +SIG from X, -SIG on the BAL network (R405 100k via R430 15k, R431 1.5k; voice 3 reads 4.7k),
+  control pins tied to **R429 75k** from P-MOD OSC B AMT CV.
+- P-MOD FILT ENV AMT VCA (1/2 U413-U414): +SIG from the filter envelope (0-10 V), BAL R404 via R4112 15k / R4113 2.2k, control **R4111
+  39k** from P-MOD FILT ENV AMT CV.
+- Both current outputs into **R432 47k** and U427 (348, a follower): the P-MOD MIX, switched by 13202s to FREQ A (R498 300k: 1/3 oct per
+  volt), PW A (R494 30.1k: x3.32) and FILT (R4105 54.9k: x1.82 oct per volt).
+- FILT ENV AMT VCA (1/2 U413): +SIG from the filter envelope, BAL R403 via R427 15k / R428 2.2k, control **R4110 62k**; its current output
+  into the cutoff summer's virtual ground through R4109 100k (no load to ground on the drawing), so octaves = I x 100k.
+- ASSUMED: the 2020's signal input is linear to 10 V (I = I_c V / 14 V); the datasheet gives 0.1 % THD at 6 Vpp only.
+
+### W-MOD source and LFO (SD312, PDF p. 75)
+- SOURCE MIX: two 2020s (U373): pink noise into one (control R376 10k from SRC MIX CV), the LFO into the other (control R388 10k from U367,
+  10 V - SRC MIX: R359 100k, R375 100k, R3132 150k from -15 V). Outputs into R364 100k, then R360 4.7k to the MOD WHEEL (R702 100k lin,
+  R374 4.7k across it), the wiper buffered by U367 onto the W-MOD bus. BAL R304 / R305.
+- LFO: a 2030 (U371) with **C335 0.01 uF** (not 1000 pF), its rate CV through **R368 75k** into U372 (R371 100k, R370 100k from -15 V:
+  15 - 1.33 x CV), then R377 54.9k / R381 1k to BASE, R382 2.21M reference. As read, 13.3 octaves over the pot, which puts the sheets'
+  LFO 6.5 near 0.8 Hz: implausible for vibrato, so a value or the 2030's frequency formula is misread. **Open**; the engine keeps its LFO.
+- The LFO's shapes: saw and pulse through 4066s and R385 / R386 10k, the triangle by a converter (U372, R365 10k, R355 / R362 20k, R369 15k).
+
 ## Open
-- The P-MOD and FILT ENV AMT VCAs' control wiring (centre of the voice sheet, in the binding): try voices 2-5, which are drawn the same.
-- The W-MOD source: the LFO's output levels, the SOURCE MIX crossfade and the wheel pot (SD312 left half, PDF p. 75).
+- The W-MOD bus level: the LFO's and the pink noise's amplitudes (the crossfade and wheel are read above).
+- The LFO's rate law (above).
 - The pitch wheel pot's end voltages (SD312, top right, near R701).
 - Whether the common glide (UNI CV) feeds the voices in poly mode (`docs/FIRMWARE.md` says unison uses the five key S&Hs).

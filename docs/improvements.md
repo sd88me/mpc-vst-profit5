@@ -25,12 +25,13 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
 ## Known differences (circuit against engine), in proposed order
 1. **Force CPU:** model 1's Rev 2 in High is 36.2 % at five voices (2.0.0: 28.4 %), over the 30 % budget; Eco is 18.1 %. The Live III
    is far inside (10.7 %). The owner's call after listening: Eco on the Force, or a CPU round.
-2. **Modulation depths** (W-MOD x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff; Poly-Mod x0.31 / x3.32 / x1.95): wait on the W-MOD
-   source level and the P-MOD and FILT ENV AMT VCAs' control wiring (`docs/CIRCUIT.md`, Open). The engine keeps the 2.0.0 depths.
+2. **Wheel-Mod depths** (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the source level waits on the LFO's and pink noise's
+   amplitudes, and the LFO's rate law reads implausibly (`docs/CIRCUIT.md`, round 3). The engine keeps the 2.0.0 Wheel-Mod and LFO.
 3. **Noise level** into the mixer: the noise VCA on board 3 and the 5837's level are not read; model 1 keeps 2.0.0's level against the
    oscillators.
-4. **The mixer inputs' coupling** (C409 / R481 and C408 / R439: 8 Hz high-pass on each oscillator) and the final VCA's control law (R474,
-   R469, R470, BAL) are not modelled.
+4. **The final VCA's control law** (R474, R469, R470, BAL) is not modelled.
+6. **The 2020's signal-input range:** model 1 takes it as linear to 10 V; if it compresses above the datasheet's 6 Vpp, the filter
+   envelope amount and Poly-Mod envelope depths are smaller than modelled. Waits on a datasheet curve or a recording.
 5. **Rev 4** is still the 2.0.0 voicing.
 
 ## Open questions
@@ -56,6 +57,14 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   at 10: 0.27 V per stage against +-1 V). Retrimmed by `tools/service_trim.py` (4-17): CUT_KV 1.00679, CUT_TRIM -0.0246 oct. Levels
   against 2.0.0 over the 38 programs (Rev 2, 1.5 s chord): median -0.3 dB; 5-6 Resonance Bells +6 dB (the self-oscillation's own level),
   5-1 Alien -11 to -13 dB, 5-5 Helicopter -27 dB (Open questions). CPU (x86): Rev 2 Eco 2.7 -> 3.3 %, High 5.4 -> 6.7 %.
+- **2026-11-22, round 3 (model 1, Rev 2 only; offline): oscillator output networks and the modulation VCAs.** The shapes average
+  through their resistor networks (saw 0-10 V, pulse -1.4-6.2 V, triangle +-5 V into osc B's node X through 3.3k), each oscillator is AC
+  coupled at 8 Hz into its mixer VCA; Poly-Mod is the circuit's (75k / 39k VCAs into R432 47k, +-13.5 V, x1/3 oct, x3.32 PW, x1.82 oct),
+  from node X with its DC; the filter envelope amount through its 62k VCA (10.9 octaves at 10 against 8). Check set: model 0 304/304
+  identical, Rev 4 identical, service 0 failed, corners 256/0, engine and host tests OK, CPU unchanged (x86 Rev 2 Eco 3.2 / High 6.5 %).
+  Against round 2 (High chord): 36 of 38 programs moved; the filter envelope makes most brighter (1-1 Brass +11 semitones of spectral
+  centroid, +1.3 dB); Poly-Mod programs move most (5-1 Alien -9 dB, 4-7 Sawtooth Arpeggiator -6 dB / -12 semitones, 3-8 Echo-Repeat
+  +11 semitones). Not yet heard.
 - **2026-11-22: installed for listening** as "Profit-5 2 Beta" (uid Pf5B, `./build.sh beta`, next to the 2.0.0 release) on the Force
   (/sdcard/Synths, its pluginList-arm entry added, MPC.settings backed up as MPC.settings.bak-p5beta-20261122) and the Live III
   (/nvme/VST2 Plugins). MPC restarted on both; no plugin errors in the log. Not yet heard.

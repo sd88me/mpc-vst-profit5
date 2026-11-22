@@ -44,6 +44,7 @@ typedef struct {
     float tri_sym;
     int kick;
     ma_vcf2040_t vcf;                   /* model 1 filter section (analog/mpc_analog_p5.h) */
+    float pmx, hpa, hpb, mixa, mixb;    /* model 1: osc B node X (V), the mixer inputs' 8 Hz coupling states and outputs (V) */
 } p5_voice_t;
 
 typedef struct {
@@ -65,7 +66,9 @@ typedef struct {
     uint32_t diag_nan;
     uint32_t diag_unconv;               /* model 1 filter: samples whose implicit solve did not converge */
     float hp16;                         /* model 1 filter: tan(pi 15.9 Hz / fsi) */
-    float vca[4];                       /* model 1: mixer A, B, noise levels and kres, from the 2020s' control currents */
+    float vca[7];                       /* model 1, from the 2020s' control currents: mixer A, B, noise, kres, P-MOD osc B and env
+                                           (bus V per V), FILT ENV AMT (oct per env V) */
+    float hp8;                          /* model 1: the mixer inputs' 8 Hz coupling coefficient */
     int model;                          /* model version (docs/improvements.md): 0 = the 2.0.0 laws, kept for old projects; new
                                            instances get P5_MODEL_LATEST. Saved in the state string as "m<n>" */
 } p5_engine_t;
