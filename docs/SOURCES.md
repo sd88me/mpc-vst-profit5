@@ -18,5 +18,6 @@ the private folder `~/roms/prophet-5/` on the development machine. Page numbers 
 | `Sequential Circuits Prophet 5 Rev 2.0 v7.0c/p5_v7.0c_2.bin` | e84c34ccfad8863137bbb098d5c74e40808e64f6 | image 2 | as above |
 | `Sequential Circuits Prophet-5 3.0 V8.1/` | v81_2732.bin b58aac3a69dda5c8ab459d9769e04065836f2e8b; bank0-2 915c4648..., 81f958f1..., a5993436...; p5diags.bin ef2cf8d1a25aa91380a16c6e454a5a04ab7b3014 | Rev 3.0 firmware V8.1 and diagnostics | the user's dumps, supplied 2026-11-22 |
 | https://maffez.com/?page_id=3556 | (web page, read 2026-11-22) | Rev 4 notes: SSI2140 and CEM3320 both fitted, SSI2164 VCAs, Q-compensation, DC blocking, part designators | public page |
+| `datasheets/V3320.pdf` | 764873f1c4ef8a84958f276155d50a8f61b0eb8e | Coolaudio V3320 (CEM 3320 clone) datasheet, 9 pp: the cell law, I_ref, 60 mV/decade, Q VCA gm and input | https://akizukidenshi.com/goodsaffix/v3320.pdf |
 
-Wanted: free recordings of real Rev 2 units (none yet).
+Wanted: the original CEM 3320 datasheet (the clone's constants stand in), free recordings of real Rev 2 units (none yet).

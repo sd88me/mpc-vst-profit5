@@ -134,7 +134,9 @@ static inline float ma_2020_ctl(float cv, float r) {
  * Each sample is solved implicitly: the tanh of each cell is linearised (tanh z / z) at the last estimate, the linear zero-delay
  * loop is solved exactly, and that repeats until no cell's gain moves by 1e-5 (at most MA_VCF_ITER passes; *unconv counts the
  * rest). Returns H (volts). s[0..3]: the cells' integrator states, s[4]: the high-pass state. */
-#define MA_VCF_ITER 8
+#ifndef MA_VCF_ITER
+#define MA_VCF_ITER 12
+#endif
 typedef struct { float s[5], q[4], o4; } ma_vcf2040_t;   /* q: each cell's tanh(z) / z at its last operating point; o4: OUT4 (probe) */
 static inline float ma_tanhz_z(float z) {                 /* tanh(z) / z: Lambert's (7,6) continued fraction, capped at 1 / |z| where it
                                                             would pass 1 (|z| ~ 5). Continuous, within 1e-4 of tanh; no exp, one division */
@@ -193,5 +195,70 @@ static inline float ma_vcf2040(ma_vcf2040_t *f, float g0, float gh, float kres, 
     f->o4 = prev;
     float vh = (F - f->s[4]) * Gh;
     f->s[4] = vh + (vh + f->s[4]);
+    return H;
+}
+
+/* ---- CEM 3320 filter section as a circuit (Rev 3 voice SD432, TM1000D; the Rev 4 reissue's "Rev 3" filter; circuits/vcf3320.cir) ----
+ * Four 3320 sections (V3320 datasheet, the CEM 3320's pin-compatible clone): a current-in, current-out gain cell into its pole cap and
+ * a buffer; I_out = (I_ref - I_in) A e^(-Vc/V_T), I_ref = 63 uA. Rev 3's network: 100k feedback (90.9k with the cell's reflected 1M),
+ * 91k coupling (stage gain -0.999), the inputs' DC balanced by 240k from -15 V; stage 1's input is a current (the mixer, the Q VCA).
+ * ASSUMED: each cell's input current limits softly at +-I_ref (I_ref tanh(i / I_ref)); the buffers' swing +-6 V around 6.9 V (Vcc - 3 V
+ * peak to peak). Resonance: OUT D through 2.2 uF / 68k (1.06 Hz) into U475 (x3.4, +-13.5 V), then 51k into Q IN (3.6k || 3k: x0.0311);
+ * the Q VCA gives -I_cr tanh(v / 0.1 V) (gm 1 mmho at 100 uA) into stage 1. Voltages are the circuit's, against the quiescent point.
+ * Inputs per sample: g0 = tan(w0 T / 2) (the stages' small-signal pole), gh = tan(w_hp T / 2) (the 1.06 Hz coupling), icr = the Q VCA's
+ * control current (A), x = the mixer's current into stage 1 times 90.9k (volts), kc = 1 - exp(-T / (10 uF x 3k)) (C4146's step, updated a
+ * sample late: its corner is 2.5 Hz). Returns U475's output (volts). Solved as ma_vcf2040. */
+typedef struct { float s[5], q[5], o4, vc; } ma_vcf3320_t;   /* q[0..3]: cells' tanh(z) / z; q[4]: the Q VCA's; vc: C4146 */
+static inline float ma_vcf3320(ma_vcf3320_t *f, float g0, float gh, float icr, float x, float kc, uint32_t *unconv) {
+    /* Q IN node: vb through 51k, 3.6k to ground, 3k to C4146: vq = qdiv vb + qoff, with qoff from C4146's voltage */
+    const float rf = 90.9e3f, iref = 63e-6f, kz = 1.0f / (rf * iref), alpha = 90.9f / 91.0f, rpar = 1.0f / (1 / 51e3f + 1 / 3.6e3f + 1 / 3e3f),
+                qdiv = rpar / 51e3f, qoff = f->vc * rpar / 3e3f, vq0 = 0.1f;
+    if (f->q[0] == 0) f->q[0] = f->q[1] = f->q[2] = f->q[3] = f->q[4] = 1;
+    float Gh = gh / (1 + gh), y[4], xin = x, H = 0, G[4];
+    int it;
+    for (it = 0; it < MA_VCF_ITER; it++) {
+        float S[4], A = 1, B = 0;
+        for (int i = 0; i < 4; i++) {
+            float g = g0 * f->q[i];
+            G[i] = g / (1 + g);
+            S[i] = (1 - G[i]) * f->s[i];
+            float a = i ? alpha * G[i] : G[i];
+            A *= a;
+            B = -a * B + S[i];                         /* y_i = -G_i (alpha) y_(i-1) + S_i */
+        }
+        /* x1 = x - rf Kq vb, vb = 3.4 (1 - Gh) (y4 - s_h) (U475, clipped), Kq = I_cr / 0.1 V x tanh(u)/u x 0.0311 */
+        float kq = rf * icr / vq0 * f->q[4] * qdiv, c = kq * 3.4f * (1 - Gh);
+        float n4 = (A * (x - rf * icr / vq0 * f->q[4] * qoff + c * f->s[4]) + B) / (1 + A * c);
+        float vb = 3.4f * (1 - Gh) * (n4 - f->s[4]);
+        if (vb > 13.5f || vb < -13.5f) vb = vb > 0 ? 13.5f : -13.5f;
+        H = vb;
+        float u = (qdiv * vb + qoff) / vq0;
+        xin = x - rf * icr / vq0 * f->q[4] * (qdiv * vb + qoff);
+        float z[5], q[5], dq = 0;
+        y[0] = -G[0] * xin + S[0];
+        z[0] = kz * (xin + y[0]);
+        for (int i = 1; i < 4; i++) { y[i] = -G[i] * alpha * y[i - 1] + S[i]; z[i] = kz * (alpha * y[i - 1] + y[i]); }
+        z[4] = u;
+        for (int i = 0; i < 5; i++) q[i] = ma_tanhz_z(z[i]);
+        for (int i = 0; i < 5; i++) { float d = fabsf(q[i] - f->q[i]); if (d > dq) dq = d; f->q[i] = q[i]; }
+        if (dq < 1e-4f) break;
+    }
+#ifdef MA_VCF_COUNT
+    extern unsigned long ma_vcf_passes, ma_vcf_samples; ma_vcf_passes += it + (it < MA_VCF_ITER); ma_vcf_samples++;
+#endif
+    if (it == MA_VCF_ITER) ++*unconv;
+    float prev = xin;
+    for (int i = 0; i < 4; i++) {
+        float in = i ? alpha * prev : prev;
+        float v = (-in - f->s[i]) * G[i], yy = v + f->s[i];
+        if (yy > 6) yy = 6; else if (yy < -6) yy = -6;
+        f->s[i] = yy + v;
+        if (f->s[i] > 6) f->s[i] = 6; else if (f->s[i] < -6) f->s[i] = -6;
+        prev = yy;
+    }
+    f->o4 = prev;
+    float vh = (prev - f->s[4]) * Gh;
+    f->s[4] = vh + (vh + f->s[4]);
+    f->vc += kc * (qdiv * H + qoff - f->vc);
     return H;
 }

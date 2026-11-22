@@ -77,6 +77,9 @@ int main(int argc, char **argv) {
         check("4-10", "amp attack period at 6.250 V (s)", attack(rev, 0), 0.81, 0.99, "s");
         check("4-11", "filter attack period at 6.250 V (s)", attack(rev, 1), 0.81, 0.99, "s");
     }
+    /* the Rev 4 setting's filter is the Rev 3 one: Rev 3 manual (TM1000D) 4-20, cutoff CV 2.000 V, A3 rings at 440 Hz, A4 at 880 Hz */
+    check("D 4-20", "Rev 4 (3320): filter rings at A3, cutoff 2.000 V (Hz)", ring(1, 0.2f, 81), 440 * 0.986, 440 * 1.014, "Hz");
+    check("D 4-20", "Rev 4 (3320): filter rings at A4 (Hz)", ring(1, 0.2f, 93), 880 * 0.986, 880 * 1.014, "Hz");
     printf("%d failed\n", bad);
     return bad != 0;
 }

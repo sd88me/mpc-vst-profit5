@@ -15,7 +15,8 @@ service manual, in the Lemus method (`docs/ROADMAP-accuracy.md`, `docs/CIRCUIT.m
 - The oscillators' output networks (shapes average; the triangle into osc B's node X through 3.3k; 8 Hz coupling into the mixer).
 - Poly-Mod and the filter envelope amount through their SSM 2020s (`docs/CIRCUIT.md`, round 3). Wheel-Mod and the LFO keep model 0's laws.
 - Glide only in unison (manual 2-22); the glide range is model 0's.
-Rev 4 keeps the model 0 laws.
+Rev 4 (model 1): the filter section is the Rev 3 circuit (`ma_vcf3320`, trimmed by TM1000D 4-20); everything else in Rev 4 keeps the
+model 0 laws.
 
 ## Rev 2 / Rev 4 switch (`P5P_REV`)
 One switch changes everything that differs between the two voicings. Rev 2 is modelled from the schematics. Rev 4 is modelled from the public

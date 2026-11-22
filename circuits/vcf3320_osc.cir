@@ -1,0 +1,18 @@
+* Rev 3 filter (vcf3320.cir), self-oscillation at RES 10 (I_cr = 10 V / 200k = 50 uA) and 45 uA: kicked by a 1 uA, 0.1 ms pulse.
+.include vcf3320.cir
+Ikick 0 n1 PULSE(0 1u 1m 1u 1u 0.1m 1)
+.control
+set noaskquit
+foreach icv 50u 45u
+  alterparam icr = $icv
+  reset
+  tran 1u 600m 500m uic
+  meas tran t1 when v(o4)=0 rise=5
+  meas tran t2 when v(o4)=0 rise=55
+  meas tran pk4 max v(o4)
+  meas tran pkb max v(vb)
+  let fosc = 50/(t2-t1)
+  echo "OSC $icv $&fosc $&pk4 $&pkb"
+end
+.endc
+.end

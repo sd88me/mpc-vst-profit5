@@ -10,23 +10,26 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   so the model is checked against the schematic, ngspice and the service manual only.
 - **Free reference recordings found:** none.
 - **Model version:** a state without "m<n>" loads as model 0, the 2.0.0 laws, bit-identical; new instances are model 1.
+- **Rev 4 (2026-11-23):** the plugin's Rev 4 setting is the reissue in its Rev 3 (CEM 3320) filter mode. Target: the Rev 3 filter section
+  (TM1000D SD432) with the 3320's law from the V3320 datasheet; the reissue's own differences (Q compensation, mixer, DC blocking) from the
+  maffez.com notes where traced. Tier: circuit public for Rev 3, partial for Rev 4; no reference recordings.
 
 ## Check set (run before and after every round)
 | Check | State (2026-11-22, after round 2) |
 |---|---|
-| `tools/spice_check.py` (every netlist against ngspice, and `ma_vcf2040` against `circuits/vcf2040*.cir` at 48 and 96 kHz; `tools/docker/Dockerfile`) | 20 checks, 0 failed, 5 open |
+| `tools/spice_check.py` (every netlist against ngspice; `ma_vcf2040` and `ma_vcf3320` against their decks at 48 and 96 kHz; `tools/docker/Dockerfile`) | 28 checks, 0 failed, 5 open (2026-11-23) |
 | `test/test_engine.c` (152 program renders, glide, pitch) | passes |
 | `tools/golden.c` (304 renders; `build/golden-2.0.0`, local) | model 0: 304 identical; model 1: the 152 Rev 2 renders differ, Rev 4 identical |
 | `test/test_corners.c` (extremes, random settings, filter sweeps; NaN, bounds, resets, unconverged solves) | 256 cases, 0 failed |
-| `tools/service_check.c` (manual 4-17 C3 and C5, 3.4, 4-10, 4-11); trims by `tools/service_trim.py` | model 1: 0 failed; model 0: 4 failed (as 2.0.0) |
+| `tools/service_check.c` (TM1000C 4-17 C3 and C5, 3.4, 4-10, 4-11; TM1000D 4-20 A3 and A4 for the Rev 4 setting); trims by `tools/service_trim.py [rev4]` | model 1: 0 failed |
 | `tests/run.sh` (the plugin under ASan: state round trips, legacy chunks, favourites) | OK |
 | CPU: `tools/bench.c` (5 voices, 1-7 Sync I; argument = model), on x86 and cross-built with zig for the devices (`-O2`, the builder's targets), run over ssh; budget: Force, 5 voices, under 30 % | Device, 2026-11-22: Force (armv7) model 0 Eco 14.3 / High 28.4 %, model 1 Rev 2 Eco 18.1 / High **36.2 %**; Live III (arm64) model 0 4.2 / 8.1 %, model 1 5.6 / 10.7 % (before the rational tanh). Rev 4 unchanged. Repeat runs agree to 0.2 % |
 
 ## Known differences (circuit against engine), in proposed order
 1. **Force CPU:** model 1's Rev 2 in High is 36.2 % at five voices (2.0.0: 28.4 %), over the 30 % budget; Eco is 18.1 %. The Live III
    is far inside (10.7 %). The owner's call after listening: Eco on the Force, or a CPU round.
-2. **The LFO's rate and Wheel-Mod depths** (owner's call, 2026-11-22: the Rev 2 circuit, confirmed by the parts list and the firmware, makes
-   the LFO 0.002-21 Hz and the sheets' 6.5 0.83 Hz; keep 2.0.0's law for the sheets' sake, or follow the circuit) (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the LFO as read on SD312 (13 octaves,
+2. **Wheel-Mod depths** (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff) wait on the LFO and pink noise amplitudes. (The LFO's rate
+   law is declined: below.) (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the LFO as read on SD312 (13 octaves,
    0.002-21 Hz) contradicts the factory sheets (5-5 Helicopter would chop at 1.3 Hz); the gap is probably in the CV path upstream (firmware
    or S&H scaling). Waits on the firmware's handling of LFO FREQ, or a recording. The engine keeps the 2.0.0 Wheel-Mod and LFO.
 7. **Autotune** uses four bias CVs per oscillator by range (manual 2-19); the engine has one static residual.
@@ -78,9 +81,24 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   off: release 8.5 ms to -40 dB under the 2050 law (model 0: 5 ms). The LFO checked against the parts list, the firmware and the pot
   tapers: the circuit reading stands (item 2). Check set: model 0 304/304 identical, Rev 4 identical, service 0 failed, corners 256/0,
   engine and host tests OK.
+- **2026-11-23, round 6 (model 1, Rev 4 only; offline): the Rev 3 filter section as a circuit.** `ma_vcf3320` (analog/mpc_analog_p5.h):
+  four 3320 sections (current-mode cells, 150 pF, 100k / 91k / 240k), the 1.06 Hz output coupling, U475 x3.4, the Q IN network (with
+  C4146) and the Q VCA. Against ngspice of the same circuit (`circuits/vcf3320*.cir`): gains within 0.24 % (48 kHz) / 0.08 % (96 kHz),
+  -3 dB 433.4 / 433.1 Hz, self-oscillation 976.64 / 976.50 Hz at 0.8821 / 0.8837 V, 0 unconverged samples (MA_VCF_ITER 12: the
+  heaviest drive at 19 kHz needed 9-12 passes). Trimmed by the Rev 3 manual's 4-20 (`tools/service_trim.py rev4`): CUT4_KV 0.99826,
+  CUT4_TRIM +0.0364 oct; A3 440.000 Hz, A4 880.005 Hz. Against 2.0.0's Rev 4 (High chord): median -2.6 dB (to -9.9 dB on resonant
+  programs: no Q compensation, item 9) and +3.7 semitones of centroid. Check set: SPICE 28/0, service 0 failed (7 cases), corners 256/0,
+  goldens model 0 304/304 identical and model 1 Rev 2 unchanged, engine (the Rev 4 bass test now model 0's) and host tests OK. CPU: Live
+  III Rev 4 Eco 4.1 -> 5.9 %, High 8.1 -> 11.4 %.
 - **2026-11-22: installed for listening** as "Profit-5 2 Beta" (uid Pf5B, `./build.sh beta`, next to the 2.0.0 release) on the Force
   (/sdcard/Synths, its pluginList-arm entry added, MPC.settings backed up as MPC.settings.bak-p5beta-20261122) and the Live III
   (/nvme/VST2 Plugins). MPC restarted on both; no plugin errors in the log. Not yet heard.
+
+9. **Rev 4's Q compensation** (the reissue gives bass back as resonance rises; maffez.com: a 2164 cell, U9-D, R274 16.2k) is not modelled:
+   model 1's Rev 4 loses bass like a Rev 3 (5-6 dB on resonant programs). Its topology needs tracing.
+10. **Rev 4's mixer drive into the 3320** is assumed (one osc at 10 = 0.25 x I_ref); Rev 3's CA3280 bias and Rev 4's SSI2164 gains are not
+   read. Rev 4's VCOs, envelopes and modulation keep the 2.0.0 laws.
+11. **Force CPU for Rev 4:** Live III Rev 4 High 8.1 -> 11.4 %; the Force (offline on 2026-11-23) is estimated near 40 % in High.
 
 ## Tried and dropped
 - 2026-11-22: one division for four in the filter (a product's reciprocal): slower on the Force (High 36.4 -> 38.6 %).
@@ -93,4 +111,5 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
 - 2026-11-22: a hard 0.65 V dead zone in the 2020 control law: silenced 5-5 Helicopter (-71 dB); replaced by the diode equation.
 
 ## Declined
-(none yet)
+- 2026-11-22: the Rev 2 LFO rate law as read (0.002-21 Hz, 0.83 Hz at 6.5): the owner keeps 2.0.0's law, which suits the factory sheets
+  (written on Rev 1 units). The evidence is in `docs/CIRCUIT.md`.

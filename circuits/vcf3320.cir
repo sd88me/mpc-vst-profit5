@@ -1,0 +1,49 @@
+* Rev 3 filter section (SD432, TM1000D p. 51; docs/CIRCUIT.md "Rev 3 filter"): four CEM 3320 sections as the V3320 datasheet
+* describes them: a current-in, current-out cell (gain a, I_ref 63 uA; ASSUMED soft limit I_ref tanh(i / I_ref)) into 150 pF and a buffer,
+* the cell's 1M output impedance reflected across its 100k feedback, 91k coupling, the input held at a fixed potential (a 0 V source
+* here: signals only). The buffers' swing is +-6 V. OUT D -> 2.2 uF / 68k -> U475 x3.4 (+-13.5 V) -> 51k -> Q IN (3.6k, and 3k + 10 uF)
+* -> the Q VCA: -I_cr tanh(v / 0.1 V) into stage 1. Inputs: imix (AC, A) into stage 1; parameters a (the cells' gain: the pole) and icr.
+.param a=0.0857 icr=0 iref=63u c=150p
+Iin 0 n1 DC 0 AC 1e-5
+* stage 1
+RF1 o1 n1 100k
+RO1 o1 n1 1meg
+V1 n1 0 0
+B1 0 c1 I=-{a}*{iref}*tanh(i(V1)/{iref})
+C1 c1 0 {c}
+Bl1 c1 0 I=(v(c1)>6 ? (v(c1)-6)*1e-2 : (v(c1)<-6 ? (v(c1)+6)*1e-2 : 0))
+E1 o1 0 c1 0 1
+* stages 2-4
+RC2 o1 n2 91k
+RF2 o2 n2 100k
+RO2 o2 n2 1meg
+V2 n2 0 0
+B2 0 c2 I=-{a}*{iref}*tanh(i(V2)/{iref})
+C2 c2 0 {c}
+Bl2 c2 0 I=(v(c2)>6 ? (v(c2)-6)*1e-2 : (v(c2)<-6 ? (v(c2)+6)*1e-2 : 0))
+E2 o2 0 c2 0 1
+RC3 o2 n3 91k
+RF3 o3 n3 100k
+RO3 o3 n3 1meg
+V3 n3 0 0
+B3 0 c3 I=-{a}*{iref}*tanh(i(V3)/{iref})
+C3 c3 0 {c}
+Bl3 c3 0 I=(v(c3)>6 ? (v(c3)-6)*1e-2 : (v(c3)<-6 ? (v(c3)+6)*1e-2 : 0))
+E3 o3 0 c3 0 1
+RC4 o3 n4 91k
+RF4 o4 n4 100k
+RO4 o4 n4 1meg
+V4 n4 0 0
+B4 0 c4 I=-{a}*{iref}*tanh(i(V4)/{iref})
+C4 c4 0 {c}
+Bl4 c4 0 I=(v(c4)>6 ? (v(c4)-6)*1e-2 : (v(c4)<-6 ? (v(c4)+6)*1e-2 : 0))
+E4 o4 0 c4 0 1
+* output and the resonance loop
+C4165 o4 h 2.2u
+R4468 h 0 68k
+BU vb 0 V=max(-13.5, min(13.5, 3.4*v(h)))
+R4425 vb q 51k
+RQIN q 0 3.6k
+R4424 q qc 3k
+C4146 qc 0 10u
+BQ 0 n1 I=-{icr}*tanh(v(q)/0.1)

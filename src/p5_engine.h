@@ -44,6 +44,7 @@ typedef struct {
     float tri_sym;
     int kick;
     ma_vcf2040_t vcf;                   /* model 1 filter section (analog/mpc_analog_p5.h) */
+    ma_vcf3320_t vcf3;                  /* model 1, Rev 4: the Rev 3 filter section */
     float pmx, hpa, hpb, mixa, mixb;    /* model 1: osc B node X (V), the mixer inputs' 8 Hz coupling states and outputs (V) */
 } p5_voice_t;
 
@@ -69,6 +70,7 @@ typedef struct {
     float vca[7];                       /* model 1, from the 2020s' control currents: mixer A, B, noise, kres, P-MOD osc B and env
                                            (bus V per V), FILT ENV AMT (oct per env V) */
     float hp8;                          /* model 1: the mixer inputs' 8 Hz coupling coefficient */
+    float hp1, kc3;                     /* model 1, Rev 4: the 3320 section's output coupling and C4146 step */
     int model;                          /* model version (docs/improvements.md): 0 = the 2.0.0 laws, kept for old projects; new
                                            instances get P5_MODEL_LATEST. Saved in the state string as "m<n>" */
 } p5_engine_t;

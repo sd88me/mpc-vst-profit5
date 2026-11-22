@@ -90,11 +90,12 @@ int main(void) {
         printf("rev %d self-oscillation: peak %.3f at %.0f Hz\n", r ? 4 : 2, peak(buf + FS / 2, FS / 2), f);
         assert(peak(buf + FS / 2, FS / 2) > 0.02f && f > 250 && f < 800);
     }
-    /* 7. bass under resonance: Rev 2 loses more than Rev 4 */
+    /* 7. bass under resonance: in model 0 (2.0.0's voicing) Rev 2 loses more than Rev 4. Model 1's Rev 4 is the Rev 3 circuit, which loses
+     * bass as Rev 2 does; the reissue's Q compensation is not modelled yet (docs/improvements.md) */
     {
         float pk[2];
         for (int r = 0; r < 2; r++) {
-            p5_init(&E, FS); plain(&E, (float)r, 0);
+            p5_init(&E, FS); E.model = 0; plain(&E, (float)r, 0);
             E.p[P5P_A_FREQ] = 0; E.p[P5P_CUTOFF] = 0.75f; E.p[P5P_RESO] = 0.7f;
             p5_note_on(&E, 36, 1);
             p5_render(&E, buf, FS);

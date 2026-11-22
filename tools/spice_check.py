@@ -85,6 +85,22 @@ for fs in ('48000', '96000'):
     unc = int(out.split('unconverged samples:')[1].split()[0])
     check('filter circuit @%s: unconverged samples' % fs, '0', str(unc), unc == 0)
 
+# 9. the Rev 3 filter (the Rev 4 setting) as a circuit: ma_vcf3320 against ngspice of the same circuit (circuits/vcf3320*.cir)
+sp_ac, sp_osc = rows(run('vcf3320_ac.cir'), 'ROW'), rows(run('vcf3320_osc.cir'), 'OSC')
+exe = os.path.join(HERE, '..', 'build', 'vcf3320_compare')
+subprocess.run(['gcc', '-O2', '-std=c11', '-I' + os.path.join(HERE, '..', 'analog'), os.path.join(HERE, '..', 'tools', 'vcf3320_compare.c'),
+                '-lm', '-o', exe], check=True)
+for fs in ('48000', '96000'):
+    out = subprocess.run([exe, fs], capture_output=True, text=True).stdout
+    k_ac, k_osc = rows(out, 'ROW'), rows(out, 'OSC')
+    worst = max(abs(a / b - 1) for sr, kr in zip(sp_ac, k_ac) for a, b in zip(kr[1:4], sr[1:4]))
+    check('3320 circuit @%s: gains at 20/100/900 Hz, 4 resonances' % fs, 'worst %.3f %%' % (100 * worst), 'ma_vcf3320', worst < 0.005)
+    check('3320 circuit @%s: -3 dB at RES 0 (Hz)' % fs, '%.1f' % sp_ac[0][4], '%.1f' % k_ac[0][4], abs(k_ac[0][4] / sp_ac[0][4] - 1) < 0.003)
+    check('3320 circuit @%s: self-osc at RES 10 (Hz, V)' % fs, '%.2f / %.4f' % (sp_osc[0][1], sp_osc[0][2]),
+          '%.2f / %.4f' % (k_osc[0][1], k_osc[0][2]), abs(k_osc[0][1] / sp_osc[0][1] - 1) < 0.002 and abs(k_osc[0][2] / sp_osc[0][2] - 1) < 0.01)
+    unc = int(out.split('unconverged samples:')[1].split()[0])
+    check('3320 circuit @%s: unconverged samples' % fs, '0', str(unc), unc == 0)
+
 w = max(len(x[0]) for x in results)
 bad = nopen = 0
 for what, c, e, ok, note in results:

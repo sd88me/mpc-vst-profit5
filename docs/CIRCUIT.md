@@ -175,3 +175,28 @@ against a recording.
 - The triangle: "subtracting the sawtooth from the half-sawtooth ... and amplifying by X2" (2-23).
 - The LFO "differs by having R378/80 fix PW at 50%, and Q308 discharge C335" (2-22).
 - Autotune: four BIAS CVs per oscillator, matched at 300, 600, 1200 and 2400 Hz and used by range (2-19); not modelled.
+
+## Rev 3 filter (TM1000D, voice 2 SD432, IA scan PDF p. 51; the model 1 "Rev 4" setting) - read 2026-11-23
+Chip law from the V3320 datasheet (the CEM 3320's pin-compatible clone; `docs/SOURCES.md`): each section is a current-in, current-out cell,
+I_out = (I_ref - I_in) A e^(-Vc/V_T), I_ref = (0.46 Vcc - 0.65) / 100k (63 uA), into its pole cap and a buffer (quiescent 0.46 Vcc =
+6.9 V, swing Vcc - 3 V peak to peak); the cell's 1M output resistance reflects across the feedback resistor; frequency control 60 mV per
+decade (18 mV/oct), positive lower; the Q VCA: signal input 3.6k to ground (AC coupled), gm 1 mmho at 100 uA of control current into a
+low-impedance node, its output into stage 1.
+- **Sections (U470):** CAP A-D C4153, C4152, C4171, C4172 **150 pF 5 % poly**. Feedback R4419, R4420, R4464, R4463 **100k**; coupling
+  R4422, R4418, R4461 **91k** (stage gain -(100k || 1M) / 91k = -0.999); R4421, R4417, R4462 **240k** from -15 V into IN B-D (balance the
+  coupling's DC). Iee R4465 1.5k to -15 V.
+- **Input:** the mixer's CA3280 current outputs (U465: osc A saw through R4373 150k / R4372 330, pulse into the inverting input through
+  R4375 200k / R4374 330, osc B through R4244 / R4245 150k / R4379 330; bias through R4377 / R4378 3.3k from MIX AMT CV) and NOISE through
+  R4376 100k, straight into IN A. The CA3280s' bias law (Rev 3's CV scheme) is not resolved, so the drive is **assumed** (below).
+- **Output and resonance:** OUT D through **C4165 2.2 uF / R4468 68k** (1.06 Hz) into U475 (TL082, **x3.4**: R4506 240k / R4505 100k);
+  U475 feeds the final VCA and, through **R4425 51k**, Q IN (R4424 3k + C4146 10 uF to ground, with the pin's 3.6k: x0.0311 above about
+  25 Hz). Q CNTL from FILT RES CV through **R4423 200k** (50 uA at 10 V). Loop gain 90.9k x (I_cr / 0.1 V) x 0.0311 x 3.4: 4.8 at RES
+  10, oscillation from about RES 8.3.
+- **Cutoff:** FILT FREQ SMR U434 (LM348): FILT S/H, FILT SUM CV and the Poly-Mod (R4180 54.9k) into R4146 162k + FIL SCALE R4134 50k ||
+  C468 .001, then R4466 187k / 1.82k (9.64 mV per volt) to Fc CNTL, offset by F OFF (R4504 100k via R4503 249k): about 1 oct/V once trimmed.
+- **Calibration (TM1000D 4-20):** cutoff CV 2.000 V, unison, resonance up: A3 rings at 440 Hz and A4 at 880 Hz (INIT FREQ and FILT SCALE).
+  "There is no computer-correction of filter tuning ... There is also no temperature compensation."
+- **The Rev 4 reissue** (maffez.com page): both an SSI2140 and a CEM3320 are fitted; the switch turns each one's output VCA on or off and
+  shifts the 3320's control an octave (its caps are twice Rev 3's). The 3320 path has output Q compensation (a 2164 cell, U9-D, R274 16.2k)
+  and DC blocking; its mixer is SSI2164 cells into R82 169k. **Not modelled**: the compensation's topology and the mixer's gain are not
+  traced.

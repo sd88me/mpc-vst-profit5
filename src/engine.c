@@ -17,6 +17,13 @@
 #define CUT_KV 1.00679f     /* x the cutoff CV (R406 V/OCT; its range is 1.000-1.098) */
 /* model 1: H (volts) to the engine's level: 0.45 (2.0.0's open filter, one saw at mix 10) / (20 x 0.272 V) */
 #define VCF_OUT (0.45f / (20 * 0.02906f * 9.35f))
+/* model 1, Rev 4 (3320) filter trims (Rev 3 manual 4-20: cutoff CV 2.000 V, A3 rings at 440 Hz and A4 at 880 Hz); tools/service_trim.py */
+#define CUT4_TRIM 0.03641f
+#define CUT4_KV 0.99826f
+/* model 1, Rev 4: one osc at 10 puts 0.25 x I_ref (63 uA) into stage 1 (ASSUMED: the Rev 3 CA3280 and Rev 4 SSI2164 mixer gains are not
+ * read); x 90.9k gives the kernel's volts. Output: U475 to the engine's level, one saw at mix 10 through an open filter as loud as 2.0.0 */
+#define VCF3_IN (0.25f * 63e-6f * 90.9e3f)
+#define VCF3_OUT (0.45f / (3.4f * VCF3_IN))
 #define CTL_MASK 15         /* control-rate work every 16 internal samples */
 
 /* ---- voicing constants per revision (docs/ENGINE.md, "Rev 2 / Rev 4") ---- */
@@ -53,6 +60,8 @@ static inline int sw(const p5_engine_t *e, int id) { return e->p[id] >= 0.5f; }
 static inline const p5_rev_t *rev(const p5_engine_t *e) { return &REV[sw(e, P5P_REV)]; }
 /* model 1 laws, derived from the Rev 2 schematics and the service manual (docs/CIRCUIT.md); Rev 4 keeps the 2.0.0 laws for now */
 static inline int circ(const p5_engine_t *e) { return e->model >= 1 && !sw(e, P5P_REV); }
+/* model 1, Rev 4: the reissue's Rev 3 filter (CEM 3320) as a circuit; the rest of Rev 4 keeps the 2.0.0 laws */
+static inline int circ4(const p5_engine_t *e) { return e->model >= 1 && sw(e, P5P_REV); }
 
 /* pot -> CV: Rev 2 quantises to the DAC's 121 steps (manual 3.3: 1/12 V steps, 10 V full scale) */
 static inline float pot(const p5_engine_t *e, int id) { return rev(e)->cv_steps ? ma_cv_quant(e->p[id], 121) : e->p[id]; }
@@ -99,6 +108,8 @@ static void set_rate(p5_engine_t *e) {
     e->pink_c = 1 - expf(-6.2831853f * 159.0f / e->fsi);
     e->hp16 = ftan(3.14159265f * 15.915f / e->fsi);           /* C413 / R471 */
     e->hp8 = 1 - expf(-6.2831853f * 7.96f / e->fsi);           /* C409 / R481, C408 / R439: the mixer inputs' coupling */
+    e->hp1 = ftan(3.14159265f * 1.0638f / e->fsi);            /* Rev 3: C4165 / R4468 */
+    e->kc3 = 1 - expf(-1 / (e->fsi * 10e-6f * 3e3f));         /* Rev 3: C4146 / R4424 */
     for (int i = 0; i < 10; i++) ma_cv_init(&e->cv[i], 0.002f, e->fsi);    /* S&H + CV filter RC, about 2 ms */
     for (int v = 0; v < P5_VOICES; v++)
         for (int d = 0; d < 3; d++) ma_drift_init(&e->v[v].drift[d], 7 * v + d + 1, e->fsi / (CTL_MASK + 1));
@@ -237,7 +248,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     const float vint = e->p[P5P_VINTAGE];
     const float tune = (e->p[P5P_TUNE] - 0.5f) * 2 + e->bend * 2;           /* +-1 semitone tune, +-2 bend (assumption) */
     const float a_semis = semis_pot(e, P5P_A_FREQ), b_semis = semis_pot(e, P5P_B_FREQ);
-    const int cm = circ(e);
+    const int cm = circ(e), c4 = circ4(e);
     /* fine: model 1 = R3107 10M into 100k, 0.01 x 10 V = 1.2 semitones (SD312); model 0 = 1 semitone (user report 2026-10-28) */
     const float b_fine = pot(e, P5P_B_FINE) * (cm ? 1.2f : 1.0f);                                  /* 0..+1 semitone (user report 2026-10-28: the original spans about a semitone) */
     const int a_saw = sw(e, P5P_A_SAW), a_pul = sw(e, P5P_A_PULSE), sync = sw(e, P5P_A_SYNC);
@@ -363,10 +374,10 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 /* cutoff: 450 Hz at pot 6 on the lowest key with KBD on (manual 3.4), 10.5 octaves over the pot (assumption) */
                 /* model 1: 10 octaves over the pot (FILT SUM CV 0-10 V at ~1 oct/V, SD312 / SD411) and trimmed as manual 4-17: cutoff
                  * CV 3.083 V on C3 (36 semitones up) rings at 440 Hz; CUT_TRIM is the 2040 model's ring / cutoff ratio at full resonance */
-                float oct = (cm ? 10.0f * (c[0] - 37 / 120.0f) - 3 - 0.03242f : 10.5f * (c[0] - 0.6f)) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + (cm ? e->vca[6] * 10 * fe : 8 * c[2] * fe)
+                float oct = (cm ? 10.0f * (c[0] - 37 / 120.0f) - 3 - 0.03242f : c4 ? 10.0f * (c[0] - 0.2f) - 3.75f - 0.03242f : 10.5f * (c[0] - 0.6f)) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + (cm ? e->vca[6] * 10 * fe : 8 * c[2] * fe)
                           + (pm_fi ? (cm ? 1.821f * vpm : 6 * pm_src + 5 * pm_b) : 0) + (wm_fi ? 3 * wm : 0) + at_f * 3 * x->press
                           + vint * (r->drift_cut_oct * x->dr[2] + r->tol_cut_oct * x->tol[5]);
-                if (cm) oct = CUT_KV * oct + CUT_TRIM;    /* R406 V/OCT and R407 INIT FREQ, trimmed as manual 4-17 */
+                if (cm) oct = CUT_KV * oct + CUT_TRIM; else if (c4) oct = CUT4_KV * oct + CUT4_TRIM;    /* R406 V/OCT and R407 INIT FREQ, trimmed as manual 4-17 */
                 float hz = clampf(450.0f * fexp2(oct), 8, 0.4f * fsi);
                 if (cm) {
                     /* model 1: the filter section as a circuit (ma_vcf2040; docs/CIRCUIT.md, circuits/vcf2040.cir). The mixer's current
@@ -380,6 +391,14 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                     float h = ma_vcf2040(&x->vcf, ftan(3.14159265f * hz * inv), e->hp16, kr, xin, &e->diag_unconv);
                     if (!(h == h) || fabsf(h) > 20) { memset(&x->vcf, 0, sizeof x->vcf); e->diag_nan++; h = 0; }
                     sum += h * VCF_OUT * ae;           /* H through the final VCA: one saw at mix 10, open, as loud as 2.0.0 */
+                    continue;
+                }
+                if (c4) {
+                    /* model 1, Rev 4: the Rev 3 filter section (ma_vcf3320; docs/CIRCUIT.md "Rev 3 filter"). Q VCA control: RES CV / 200k */
+                    float xin = VCF3_IN * (c[3] * oa + c[4] * ob + c[5] * white * 0.8f) + 1e-5f * rnd(&e->rng);
+                    float h = ma_vcf3320(&x->vcf3, ftan(3.14159265f * hz * inv), e->hp1, 10 * c[1] / 200e3f, xin, e->kc3, &e->diag_unconv);
+                    if (!(h == h) || fabsf(h) > 20) { memset(&x->vcf3, 0, sizeof x->vcf3); e->diag_nan++; h = 0; }
+                    sum += h * VCF3_OUT * ae;
                     continue;
                 }
                 float g = ftan(3.14159265f * hz * inv), G0 = g / (1 + g);
