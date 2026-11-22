@@ -134,6 +134,8 @@ void p5_init(p5_engine_t *e, float fs) {
     e->p[P5P_QUALITY] = 1.0f;
     e->p[P5P_RELEASE] = 1.0f;
     e->model = P5_MODEL_LATEST;
+    e->qcomp4 = 1;
+    for (int i = 0; i <= 256; i++) e->fvca[i] = ma_2020_ctl(10.0f * i / 256, 15e3f) / ma_2020_ctl(10, 15e3f);   /* the final VCA's law */
     p5_load_factory(e, 0);
     set_rate(e);
 }
@@ -288,7 +290,20 @@ void p5_render(p5_engine_t *e, float *out, int n) {
             e->pink += e->pink_c * (white - e->pink);                     /* one pole at 159 Hz: 100k, 0.01 uF (board 3 p3) */
             float wm_src = lfo * (1 - wm_mix) + e->pink * 6 * wm_mix;   /* 2020 crossfade on SOURCE MIX, then the wheel pot */
             float wm = wm_src * clampf(e->wheel + e->p[P5P_LFO_INIT] + at_l * maxp, 0, 1);
+            /* model 1 (Rev 2), ESTIMATE from SD312: the W-MOD bus in volts. The LFO's shapes average through 10k into 200k (saw and
+             * triangle +-5 V, the square 0-7.5 V: 0.75 of them), the SOURCE MIX 2020s' control currents through 10k (LFO: 10 V - SRC MIX;
+             * noise: SRC MIX) against their full 0.935 mA, the bus (R364 100k || R360 4.7k + R374 4.7k || the wheel's 100k: 8.4k) and the
+             * wheel network (x0.489): 1.31 V peak for one shape, the LFO VCA full and the wheel at 10. The pink noise keeps 2.0.0's level
+             * against the LFO. Destinations from the master summers: freq x0.549 (182k), PW A x7.52, PW B x6.67, cutoff x7.52 oct per V. */
+            float wmv = 0;
+            if (circ(e)) {
+                int nl = l_saw + l_tri + l_sqr;
+                float lfo_v = nl ? ((l_saw ? 2 * e->lfo_ph - 1 : 0) + (l_tri ? (e->lfo_ph < 0.5f ? 4 * e->lfo_ph - 1 : 3 - 4 * e->lfo_ph) : 0)
+                                    + (l_sqr ? (e->lfo_ph < 0.5f ? 0.75f : -0.75f) : 0)) * (1.05f / (nl + 0.05f)) : 0;
+                wmv = 1.31f * (lfo_v * e->vca[7] + e->pink * 6 * e->vca[8]) * clampf(e->wheel + e->p[P5P_LFO_INIT] + at_l * maxp, 0, 1);
+            }
             int ctl = (e->ctl++ & CTL_MASK) == 0;
+            if (c4 && ctl) e->qcomp4 = powf(1 + 96.1e3f * 10 * c[1] / 200e3f, 0.68f);   /* Rev 4 Q compensation (ESTIMATE, below) */
             if (cm && ctl) {   /* model 1: the 2020s' control currents (mixer 39k, resonance 30k), at the control rate */
                 for (int k = 0; k < 3; k++) e->vca[k] = ma_2020_ctl(10 * c[3 + k], 39e3f) * (39e3f * 0.02906f);
                 e->vca[3] = ma_2020_ctl(10 * c[1], 30e3f) * (1e4f / 14);
@@ -298,6 +313,8 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 e->vca[4] = ma_2020_ctl(10 * c[9], 75e3f) * (47e3f / 14);
                 e->vca[5] = ma_2020_ctl(10 * c[8], 39e3f) * (47e3f / 14);
                 e->vca[6] = ma_2020_ctl(10 * c[2], 62e3f) * (1e5f / 14);
+                e->vca[7] = ma_2020_ctl(10 * (1 - wm_mix), 10e3f) / ma_2020_ctl(10, 10e3f);   /* SOURCE MIX: the LFO VCA (ESTIMATE, above) */
+                e->vca[8] = ma_2020_ctl(10 * wm_mix, 10e3f) / ma_2020_ctl(10, 10e3f);         /* and the noise VCA */
             }
             const float k = 4.4f * c[1];
             float sum = 0;
@@ -315,14 +332,14 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 float pm_b = c[9] * x->out_b;                                       /* osc B part (audio rate) */
                 /* model 1: the P-MOD bus (U427 follower of R432, +-13.5 V), from osc B's node X of the last sample (DC included) */
                 const float vpm = cm ? clampf(e->vca[4] * x->pmx + e->vca[5] * 10 * fe, -13.5f, 13.5f) : 0;
-                float sa = x->semis + a_semis + tune + cents_a * 0.01f + (pm_fa ? (cm ? 4 * vpm : 48 * pm_src + 24 * pm_b) : 0) + (wm_fa ? 4 * wm : 0);
-                float sb = (b_kbd ? x->semis : 0) + b_semis + b_fine + tune + cents_b * 0.01f + (wm_fb ? 4 * wm : 0);
+                float sa = x->semis + a_semis + tune + cents_a * 0.01f + (pm_fa ? (cm ? 4 * vpm : 48 * pm_src + 24 * pm_b) : 0) + (wm_fa ? (cm ? 6.59f * wmv : 4 * wm) : 0);
+                float sb = (b_kbd ? x->semis : 0) + b_semis + b_fine + tune + cents_b * 0.01f + (wm_fb ? (cm ? 6.59f * wmv : 4 * wm) : 0);
                 float hz_a = vco_hz(r, C0_HZ * fexp2(sa * (1.0f / 12)), x->tol[2]);
                 float hz_b = C0_HZ * fexp2(sb * (1.0f / 12)) * (b_lo ? (cm ? 1.0f / 32 : 1.0f / 128) : 1.0f);   /* LO: model 1 = 5 octaves (SD312 divider), 0 = 7 */
                 if (!b_lo) hz_b = vco_hz(r, hz_b, x->tol[3]);
                 float inc_a = clampf(hz_a * inv, 0, 0.45f), inc_b = clampf(hz_b * inv, 0, 0.45f);
-                float pw_a = clampf(c[6] + (pm_pw ? (cm ? 0.332f * vpm : 0.5f * (pm_src + pm_b)) : 0) + (wm_pwa ? 0.4f * wm : 0), 0, 1);
-                float pw_b = clampf(c[7] + (wm_pwb ? 0.4f * wm : 0), 0, 1);
+                float pw_a = clampf(c[6] + (pm_pw ? (cm ? 0.332f * vpm : 0.5f * (pm_src + pm_b)) : 0) + (wm_pwa ? (cm ? 0.752f * wmv : 0.4f * wm) : 0), 0, 1);
+                float pw_b = clampf(c[7] + (wm_pwb ? (cm ? 0.667f * wmv : 0.4f * wm) : 0), 0, 1);
                 /* osc B (master) */
                 float pb = x->ph[1] + inc_b, ob = 0;
                 int wrap = pb >= 1;
@@ -375,7 +392,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 /* model 1: 10 octaves over the pot (FILT SUM CV 0-10 V at ~1 oct/V, SD312 / SD411) and trimmed as manual 4-17: cutoff
                  * CV 3.083 V on C3 (36 semitones up) rings at 440 Hz; CUT_TRIM is the 2040 model's ring / cutoff ratio at full resonance */
                 float oct = (cm ? 10.0f * (c[0] - 37 / 120.0f) - 3 - 0.03242f : c4 ? 10.0f * (c[0] - 0.2f) - 3.75f - 0.03242f : 10.5f * (c[0] - 0.6f)) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + (cm ? e->vca[6] * 10 * fe : 8 * c[2] * fe)
-                          + (pm_fi ? (cm ? 1.821f * vpm : 6 * pm_src + 5 * pm_b) : 0) + (wm_fi ? 3 * wm : 0) + at_f * 3 * x->press
+                          + (pm_fi ? (cm ? 1.821f * vpm : 6 * pm_src + 5 * pm_b) : 0) + (wm_fi ? (cm ? 7.52f * wmv : 3 * wm) : 0) + at_f * 3 * x->press
                           + vint * (r->drift_cut_oct * x->dr[2] + r->tol_cut_oct * x->tol[5]);
                 if (cm) oct = CUT_KV * oct + CUT_TRIM; else if (c4) oct = CUT4_KV * oct + CUT4_TRIM;    /* R406 V/OCT and R407 INIT FREQ, trimmed as manual 4-17 */
                 float hz = clampf(450.0f * fexp2(oct), 8, 0.4f * fsi);
@@ -390,7 +407,10 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                     float kr = e->vca[3];
                     float h = ma_vcf2040(&x->vcf, ftan(3.14159265f * hz * inv), e->hp16, kr, xin, &e->diag_unconv);
                     if (!(h == h) || fabsf(h) > 20) { memset(&x->vcf, 0, sizeof x->vcf); e->diag_nan++; h = 0; }
-                    sum += h * VCF_OUT * ae;           /* H through the final VCA: one saw at mix 10, open, as loud as 2.0.0 */
+                    /* the final VCA (ESTIMATE): its 2020 controlled through R474 15k from the amp envelope (0-10 V) with the diode law, so
+                     * the gain falls away exponentially below about 0.6 V instead of linearly; one saw at mix 10, open, as loud as 2.0.0 */
+                    float ai = ae * 256; int ak = ai >= 256 ? 255 : ai <= 0 ? 0 : (int)ai; float af = clampf(ai - ak, 0, 1);
+                    sum += h * VCF_OUT * (e->fvca[ak] + af * (e->fvca[ak + 1] - e->fvca[ak]));
                     continue;
                 }
                 if (c4) {
@@ -398,7 +418,9 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                     float xin = VCF3_IN * (c[3] * oa + c[4] * ob + c[5] * white * 0.8f) + 1e-5f * rnd(&e->rng);
                     float h = ma_vcf3320(&x->vcf3, ftan(3.14159265f * hz * inv), e->hp1, 10 * c[1] / 200e3f, xin, e->kc3, &e->diag_unconv);
                     if (!(h == h) || fabsf(h) > 20) { memset(&x->vcf3, 0, sizeof x->vcf3); e->diag_nan++; h = 0; }
-                    sum += h * VCF3_OUT * ae;
+                    /* ESTIMATE: the reissue's Q compensation (maffez.com: an SSI2164 cell on the Q CV adds level at the 3320's output; R274
+                     * 16.2k, "more" at 10-12k) restores 0.68 (11 / 16.2) of the passband's loss in dB: (1 + k)^0.68, k the loop gain */
+                    sum += h * VCF3_OUT * e->qcomp4 * ae;
                     continue;
                 }
                 float g = ftan(3.14159265f * hz * inv), G0 = g / (1 + g);

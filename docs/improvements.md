@@ -28,15 +28,14 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
 ## Known differences (circuit against engine), in proposed order
 1. **Force CPU:** model 1's Rev 2 in High is 36.2 % at five voices (2.0.0: 28.4 %), over the 30 % budget; Eco is 18.1 %. The Live III
    is far inside (10.7 %). The owner's call after listening: Eco on the Force, or a CPU round.
-2. **Wheel-Mod depths** (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff) wait on the LFO and pink noise amplitudes. (The LFO's rate
-   law is declined: below.) (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the LFO as read on SD312 (13 octaves,
+2. **Wheel-Mod depths** are an estimate (below); the pink noise's amplitude is not read. (The LFO's rate law is declined: below.) (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the LFO as read on SD312 (13 octaves,
    0.002-21 Hz) contradicts the factory sheets (5-5 Helicopter would chop at 1.3 Hz); the gap is probably in the CV path upstream (firmware
    or S&H scaling). Waits on the firmware's handling of LFO FREQ, or a recording. The engine keeps the 2.0.0 Wheel-Mod and LFO.
 7. **Autotune** uses four bias CVs per oscillator by range (manual 2-19); the engine has one static residual.
 8. **Glide's range** (the CA3080 / AD820 circuit) is still the 2.0.0 assumption; its unison-only behaviour is modelled.
 3. **Noise level** into the mixer: the noise VCA on board 3 and the 5837's level are not read; model 1 keeps 2.0.0's level against the
    oscillators.
-4. **The final VCA's control law** (R474, R469, R470, BAL) is not modelled.
+4. **The final VCA's control law** is an estimate (below).
 6. **The 2020's signal-input range:** model 1 takes it as linear to 10 V; if it compresses above the datasheet's 6 Vpp, the filter
    envelope amount and Poly-Mod envelope depths are smaller than modelled. Waits on a datasheet curve or a recording.
 5. **Rev 4** is still the 2.0.0 voicing.
@@ -94,11 +93,24 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   (/sdcard/Synths, its pluginList-arm entry added, MPC.settings backed up as MPC.settings.bak-p5beta-20261122) and the Live III
   (/nvme/VST2 Plugins). MPC restarted on both; no plugin errors in the log. Not yet heard.
 
-9. **Rev 4's Q compensation** (the reissue gives bass back as resonance rises; maffez.com: a 2164 cell, U9-D, R274 16.2k) is not modelled:
-   model 1's Rev 4 loses bass like a Rev 3 (5-6 dB on resonant programs). Its topology needs tracing.
-10. **Rev 4's mixer drive into the 3320** is assumed (one osc at 10 = 0.25 x I_ref); Rev 3's CA3280 bias and Rev 4's SSI2164 gains are not
-   read. Rev 4's VCOs, envelopes and modulation keep the 2.0.0 laws.
+9. **Rev 4's Q compensation** is an estimate (below); its topology needs tracing.
+10. **Rev 4's mixer drive into the 3320** is an estimate (below). Rev 4's VCOs, envelopes and modulation keep the 2.0.0 laws: nothing on
+   them is documented to estimate from.
 11. **Force CPU for Rev 4:** Live III Rev 4 High 8.1 -> 11.4 %; the Force (offline on 2026-11-23) is estimated near 40 % in High.
+
+## Estimates in model 1 (2026-11-23, the owner's request: "include the not modelled items even as some kind of estimate")
+Each is marked ESTIMATE in `src/engine.c`, with its basis; replace it when a trace, a datasheet or a recording settles it.
+| Item | Estimate | Basis |
+|---|---|---|
+| Rev 4 Q compensation | output x (1 + k)^0.68, k the 3320 loop gain (4.8 at RES 10) | maffez.com: an SSI2164 cell (U9-D) on the Q CV adds level at the 3320's output; R274 16.2k, "more" at 10-12k, so stock is about 11/16.2 of full; a 2164 is dB-linear, so the fraction is taken in dB |
+| Rev 4 mixer drive | one osc at 10 = 0.25 x I_ref into the 3320 | the Rev 2 circuit's headroom for one osc (0.27 of the 2040's swing); maffez's R82 169k "input limiting" |
+| Rev 2 Wheel-Mod depth | W-MOD bus 1.31 V peak (one LFO shape, wheel at 10): freq +-8.6 semitones, PW A +-9.9 V, PW B +-8.7 V, cutoff +-9.9 octaves | SD312: shapes averaged through 10k / 200k, the SOURCE MIX 2020s (10k, diode law), the bus load 8.4k, the wheel network x0.489, the summers' gains; the pink noise keeps 2.0.0's level against the LFO |
+| Rev 2 final VCA | gain = the 2020's diode-law control current through R474 15k, against its value at 10 V | the other 2020s' wiring on SD411; low sustain levels are quieter (1-3 Muted Clav, sustain 1: -7.1 dB) |
+| Glide range | not estimated | the AD820 / CA3080 wiring (R3121-R3125) is not legible enough to give a current |
+
+Levels after the estimates (High chord): Rev 4 against 2.0.0 median +1.6 dB (-4.0 to +8.1: 5-1 Alien, 5-6 Resonance Bells, 4-3 Fourths
+With Resonance louder); Rev 2 against round 6 median -0.1 dB (1-3 Muted Clav -7.1, 5-5 Helicopter -3.1). Check set: corners 256/0,
+service 0 failed, model 0 304/304 identical, engine and host tests OK. CPU (x86, today's host): Rev 2 High 9.2 -> 9.6 %, Rev 4 11.0 -> 11.1 %.
 
 ## Tried and dropped
 - 2026-11-22: one division for four in the filter (a product's reciprocal): slower on the Force (High 36.4 -> 38.6 %).

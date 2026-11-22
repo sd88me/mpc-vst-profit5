@@ -67,10 +67,12 @@ typedef struct {
     uint32_t diag_nan;
     uint32_t diag_unconv;               /* model 1 filter: samples whose implicit solve did not converge */
     float hp16;                         /* model 1 filter: tan(pi 15.9 Hz / fsi) */
-    float vca[7];                       /* model 1, from the 2020s' control currents: mixer A, B, noise, kres, P-MOD osc B and env
+    float vca[9];                       /* model 1, from the 2020s' control currents: mixer A, B, noise, kres, P-MOD osc B and env
                                            (bus V per V), FILT ENV AMT (oct per env V) */
     float hp8;                          /* model 1: the mixer inputs' 8 Hz coupling coefficient */
     float hp1, kc3;                     /* model 1, Rev 4: the 3320 section's output coupling and C4146 step */
+    float qcomp4;                       /* model 1, Rev 4: the Q compensation's gain (ESTIMATE) */
+    float fvca[257];                    /* model 1, Rev 2: the final VCA's gain over the amp envelope (ESTIMATE: the 2020's diode law) */
     int model;                          /* model version (docs/improvements.md): 0 = the 2.0.0 laws, kept for old projects; new
                                            instances get P5_MODEL_LATEST. Saved in the state string as "m<n>" */
 } p5_engine_t;
