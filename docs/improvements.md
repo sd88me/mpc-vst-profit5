@@ -20,11 +20,11 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
 | `test/test_corners.c` (extremes, random settings, filter sweeps; NaN, bounds, resets, unconverged solves) | 256 cases, 0 failed |
 | `tools/service_check.c` (manual 4-17 C3 and C5, 3.4, 4-10, 4-11); trims by `tools/service_trim.py` | model 1: 0 failed; model 0: 4 failed (as 2.0.0) |
 | `tests/run.sh` (the plugin under ASan: state round trips, legacy chunks, favourites) | OK |
-| CPU: `tools/bench.c` (x86, 5 voices, 1-7 Sync I); budget: Force, 5 voices, mean under 30 % (2.0.0: 28.3 %, 2026-10-21) | Rev 2 model 1: Eco 3.3 %, High 6.7 % (2.0.0: 2.7 / 5.4); Rev 4 unchanged. Device: not measured |
+| CPU: `tools/bench.c` (5 voices, 1-7 Sync I; argument = model), on x86 and cross-built with zig for the devices (`-O2`, the builder's targets), run over ssh; budget: Force, 5 voices, under 30 % | Device, 2026-11-22: Force (armv7) model 0 Eco 14.3 / High 28.4 %, model 1 Rev 2 Eco 18.1 / High **36.2 %**; Live III (arm64) model 0 4.2 / 8.1 %, model 1 5.6 / 10.7 % (before the rational tanh). Rev 4 unchanged. Repeat runs agree to 0.2 % |
 
 ## Known differences (circuit against engine), in proposed order
-1. **Device CPU:** model 1's Rev 2 is about 24 % heavier on x86; scaled from 2.0.0's device figure that is about 35 % on the Force at
-   five voices in High, over the 30 % budget. Needs a device bench, then the owner's call (Eco, or a CPU round).
+1. **Force CPU:** model 1's Rev 2 in High is 36.2 % at five voices (2.0.0: 28.4 %), over the 30 % budget; Eco is 18.1 %. The Live III
+   is far inside (10.7 %). The owner's call after listening: Eco on the Force, or a CPU round.
 2. **Modulation depths** (W-MOD x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff; Poly-Mod x0.31 / x3.32 / x1.95): wait on the W-MOD
    source level and the P-MOD and FILT ENV AMT VCAs' control wiring (`docs/CIRCUIT.md`, Open). The engine keeps the 2.0.0 depths.
 3. **Noise level** into the mixer: the noise VCA on board 3 and the 5837's level are not read; model 1 keeps 2.0.0's level against the
@@ -56,13 +56,18 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   at 10: 0.27 V per stage against +-1 V). Retrimmed by `tools/service_trim.py` (4-17): CUT_KV 1.00679, CUT_TRIM -0.0246 oct. Levels
   against 2.0.0 over the 38 programs (Rev 2, 1.5 s chord): median -0.3 dB; 5-6 Resonance Bells +6 dB (the self-oscillation's own level),
   5-1 Alien -11 to -13 dB, 5-5 Helicopter -27 dB (Open questions). CPU (x86): Rev 2 Eco 2.7 -> 3.3 %, High 5.4 -> 6.7 %.
+- **2026-11-22: installed for listening** as "Profit-5 2 Beta" (uid Pf5B, `./build.sh beta`, next to the 2.0.0 release) on the Force
+  (/sdcard/Synths, its pluginList-arm entry added, MPC.settings backed up as MPC.settings.bak-p5beta-20261122) and the Live III
+  (/nvme/VST2 Plugins). MPC restarted on both; no plugin errors in the log. Not yet heard.
 
 ## Tried and dropped
+- 2026-11-22: one division for four in the filter (a product's reciprocal): slower on the Force (High 36.4 -> 38.6 %).
 - 2026-11-22: re-linearising the filter until OUT4 moved < 1 uV (always two passes): +60 % CPU. Replaced by stopping when no cell's
   gain moves by 1e-4 (1.02 passes); against a 1e-7 solve the renders are identical or under -88 dB, except 5-6 Resonance Bells, whose
   self-oscillation drifts in phase (same level to 0.01 dB, spectra within 0.1 dB).
 - 2026-11-22: damping the re-linearisation: slower to converge, more unconverged samples.
-- 2026-11-22: a cubic exp2 inside the filter's tanh: its kinks stall the iteration (High 9.3 -> 13.9 %).
+- 2026-11-22: a cubic exp2 inside the filter's tanh: its kinks stall the iteration (High 9.3 -> 13.9 %). Kept instead: Lambert's (7,6)
+  continued fraction for tanh(z)/z, capped at 1/|z| (continuous, within 1e-4): Force High 40.9 -> 36.2 %, renders within -89.9 dB of expf.
 - 2026-11-22: a hard 0.65 V dead zone in the 2020 control law: silenced 5-5 Helicopter (-71 dB); replaced by the diode equation.
 
 ## Declined

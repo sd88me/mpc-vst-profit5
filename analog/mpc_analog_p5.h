@@ -136,12 +136,12 @@ static inline float ma_2020_ctl(float cv, float r) {
  * rest). Returns H (volts). s[0..3]: the cells' integrator states, s[4]: the high-pass state. */
 #define MA_VCF_ITER 8
 typedef struct { float s[5], q[4], o4; } ma_vcf2040_t;   /* q: each cell's tanh(z) / z at its last operating point; o4: OUT4 (probe) */
-static inline float ma_tanhz_z(float z) {                 /* tanh(z) / z, 1 near 0 */
+static inline float ma_tanhz_z(float z) {                 /* tanh(z) / z: Lambert's (7,6) continued fraction, capped at 1 / |z| where it
+                                                            would pass 1 (|z| ~ 5). Continuous, within 1e-4 of tanh; no exp, one division */
+    float z2 = z * z;
+    float r = (135135.0f + z2 * (17325.0f + z2 * (378.0f + z2))) / (135135.0f + z2 * (62370.0f + z2 * (3150.0f + 28.0f * z2)));
     float a = fabsf(z);
-    if (a < 1e-3f) return 1.0f;
-    if (a > 9.0f) return 1.0f / a;
-    float e = expf(-2 * a);
-    return (1 - e) / ((1 + e) * a);
+    return a * r > 1.0f ? 1.0f / a : r;
 }
 static inline float ma_vcf2040(ma_vcf2040_t *f, float g0, float gh, float kres, float x, uint32_t *unconv) {
     /* g0 = tan(w0 T / 2) (prewarped at the small-signal pole), gh = tan(w_hp T / 2); the cells' u / 2 V_T scale per volt of
@@ -173,7 +173,7 @@ static inline float ma_vcf2040(ma_vcf2040_t *f, float g0, float gh, float kres, 
         y[0] = -G[0] * xin + S[0];
         z[0] = kz1 * (xin + y[0]);
         for (int i = 1; i < 4; i++) { y[i] = -G[i] * y[i - 1] + S[i]; z[i] = kz * (y[i - 1] + y[i]); }
-        for (int i = 0; i < 4; i++) q[i] = ma_tanhz_z(z[i]);          /* independent: they overlap */
+        for (int i = 0; i < 4; i++) q[i] = ma_tanhz_z(z[i]);
         for (int i = 0; i < 4; i++) { float d = fabsf(q[i] - f->q[i]); if (d > dq) dq = d; f->q[i] = q[i]; }
         if (dq < 1e-4f) break;
     }
