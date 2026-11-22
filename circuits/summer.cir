@@ -1,5 +1,6 @@
-* Board 3 osc B master summer: matched inputs into 100k (first stage), then a 100k / (100k || 0.01 uF) inverter.
-* 1 V on each input in turn: osc B init / key (100k), fine (2M), and the unlabelled 412k, 182k and 2.21M inputs.
+* Board 3 (SD312) osc B master summer, as read 2026-11-22. Stage 1 (U377): LO via R3103 100k, glide via R3105 100k, W-MOD FREQ B
+* via R3100 182k, OSC B FINE CV via R3107 10M; feedback R3109 100k. Stage 2: R3108 100k, R3111 100k || C347 0.01 uF.
+* Gains measured with 1 V on each input in turn, then the LO divider (-15 V, R3134 / R3133 100k / 100k) switched into R3103.
 .param rin=100k
 V1 in 0 DC 1 PWL(0 0 1u 1)
 Rin in n1 {rin}
@@ -9,11 +10,20 @@ R2 o1 n2 100k
 R3 n2 o2 100k
 C3 n2 o2 0.01u
 E2 o2 0 0 n2 1e6
+* LO divider into a copy of the summer
+Vm vm 0 -15
+R3134 vm d 100k
+R3133 d 0 100k
+R3103 d m1 100k
+Rf2 m1 mo 100k
+E3 mo 0 0 m1 1e6
 .control
 set noaskquit
 tran 10u 10m
 meas tran t63 when v(o2)=0.632 rise=1
-foreach r 100k 2meg 412k 182k 2.21meg
+op
+print v(mo)
+foreach r 100k 10meg 182k
   alterparam rin = $r
   reset
   op

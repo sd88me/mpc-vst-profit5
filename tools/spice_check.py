@@ -27,14 +27,15 @@ check('2050 attack length (tau)', '%.4f' % t, '1.4663 (ATK)', abs(t - 1.4663) < 
 f3 = meas(run('pink.cir'), 'f3')[0]
 check('wheel-mod noise pole (Hz)', '%.1f' % f3, '159 (pink_c)', abs(f3 - 159) < 1.5)
 
-# 3. osc B master summer gains and smoothing
+# 3. osc B master summer (SD312, read 2026-11-22: fine is R3107 10M, W-MOD FREQ B is R3100 182k, LO a -15 V 100k/100k divider)
 s = run('summer.cir')
 g = [float(x) for x in re.findall(r'^v\(o2\) = ([-+0-9.eE]+)', s, re.M)]
+lo = float(re.findall(r"^v\(mo\) = ([-+0-9.eE]+)", s, re.M)[0])
 t63 = meas(s, 't63')[0]
-check('summer: key / init input gain', '%.3f' % g[0], '1 (semitones 1:1)', abs(g[0] - 1) < 0.002)
-check('summer: fine input gain', '%.4f' % g[1], '0.05 (summer input, scan-derived; b_fine now 1 semitone)', abs(g[1] - 0.05) < 0.0005)
-check('summer: 412k / 182k / 2.21M input gains', '%.3f / %.3f / %.4f' % (g[2], g[3], g[4]), 'not used yet', True,
-      'sources not legible on the scan')
+check('summer: glide / init input gain', '%.3f' % g[0], '1 (semitones 1:1)', abs(g[0] - 1) < 0.002)
+check('summer: fine (10M) gain', '%.4f' % g[1], '1 semitone (b_fine)', 'open', '0.01 x 10 V = 1.2 semitones; docs/improvements.md')
+check('summer: W-MOD FREQ B (182k) gain', '%.3f' % g[2], 'not used (4 semitones at full)', 'open', 'needs the W-MOD source level')
+check('summer: LO FREQ shift (V = octaves)', '%.3f' % lo, '7 octaves (1/128)', 'open', 'circuit 5 octaves; docs/improvements.md')
 check('summer: output smoothing (ms)', '%.2f' % (t63 * 1e3), '2 (ma_cv RC)', 0.5 < t63 * 1e3 < 3, 'the engine lumps it with the S&H RC')
 
 # 4. glide: constant slew rate, so 24 semitones take twice as long as 12
@@ -50,10 +51,23 @@ check('2030 converter, 0-1 V (oct/V)', '%.4f' % low, '1.0000', abs(low - 1) < 0.
 check('2030 converter, 9-10 V droop (cents)', '%.1f' % (1200 * (top - low)), 'reset model only', True,
       'bulk resistance; HI V/OCT trims it')
 
+# 6. voice filter cutoff CV: CONT volts per summer volt over the V/OCT trim, against the 2040's -18 mV/oct (datasheet, 25 C)
+c = [abs(float(x)) for x in re.findall(r'^v\(c\) = ([-+0-9.eE]+)', run('filtcv.cir'), re.M)]
+lo_o, hi_o = c[0] / 0.018, c[-1] / 0.018
+check('filter CV: oct/V over the V/OCT trim', '%.3f .. %.3f' % (lo_o, hi_o), '1 (10.5 oct over the pot)', 'open',
+      'trim cannot reach 1.000 at 25 C; span over the pot ~10 oct; docs/CIRCUIT.md')
+
+# 7. mixer bus: one osc at 10 into stage 1 of the 2040 (2020 law from its datasheet)
+m = run('mixbus.cir')
+iin = abs(float(re.findall(r'^i\(vin1\) = ([-+0-9.eE]+)', m, re.M)[0]))
+check('mixer: one osc at 10, 2040 stage level (V)', '%.3f' % (iin * 10e3), '0.45 x level into a +-1.4 tanh', 'open',
+      'stage outputs swing +-1 V (datasheet); docs/improvements.md')
+
 w = max(len(x[0]) for x in results)
-bad = 0
+bad = nopen = 0
 for what, c, e, ok, note in results:
-    bad += not ok
-    print('%-*s  circuit %-22s engine %-28s %s%s' % (w, what, c, e, 'PASS' if ok else 'FAIL', ('  (' + note + ')') if note else ''))
-print('%d checks, %d failed' % (len(results), bad))
+    state = 'OPEN' if ok == 'open' else 'PASS' if ok else 'FAIL'
+    bad += state == 'FAIL'; nopen += state == 'OPEN'
+    print('%-*s  circuit %-22s engine %-28s %s%s' % (w, what, c, e, state, ('  (' + note + ')') if note else ''))
+print('%d checks, %d failed, %d open (known differences, docs/improvements.md)' % (len(results), bad, nopen))
 sys.exit(1 if bad else 0)

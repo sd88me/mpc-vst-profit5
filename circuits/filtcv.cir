@@ -1,0 +1,21 @@
+* Voice filter cutoff CV (SD411): U435 inverting summer, KEY and FILT SUM CV via R4106 / R4107 100k, feedback R4108 102k + R406 10k
+* (V/OCT trim, swept 0 / 5k / 10k), then R477 54.9k / R479 1k to the 2040's CONT (pin 7, -18 mV/oct at 25 C, datasheet).
+* Prints the CONT voltage per summer volt; spice_check.py turns it into octaves per volt.
+.param rt=5k
+V1 in 0 DC 1
+R4107 in n 100k
+R4108 n f 102k
+R406 f o {rt}
+E1 o 0 0 n 1e6
+R477 o c 54.9k
+R479 c 0 1k
+.control
+set noaskquit
+foreach r 1 5k 10k
+  alterparam rt = $r
+  reset
+  op
+  print v(c)
+end
+.endc
+.end
