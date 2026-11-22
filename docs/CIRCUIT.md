@@ -122,7 +122,8 @@ against a recording.
 
 ## Round 3 reading (2026-11-22, voices 3 and 4, SD412-SD415, PDF pp 89-102; SD312 left half, PDF p. 75)
 
-### Oscillator output networks (2030 levels from the E-mu SSM 2030 sheet, p. 4: saw 0 to +10 V; pin 5 "half a sawtooth"; pulse -1.4 to +6.2 V)
+### Oscillator output networks (2030 levels: saw 0 to +10 V and pin 5 "half a sawtooth", E-mu SSM 2030 sheet p. 4; pulse 0 to 7.5 V across its
+### pull-down, manual 2-23, which the E-mu sheet gives as -1.4 to +6.2 V)
 - Osc A: saw (R453 22k load) and pulse (R454 22k) through 4016s and R456 / R457 10k to one node, C409 0.1 uF, R481 200k into the MIX OSC A
   VCA. The shapes average: each 1 / (n + 0.05) of itself (n shapes on), 0.952 for one. AC coupled at 7.96 Hz.
 - Osc B: saw and pulse through 4016s and R436 / R435 10k into R434 200k and the U442 (TL082) buffer, then **R438 10k to node X**. The
@@ -150,7 +151,11 @@ against a recording.
   R374 4.7k across it), the wiper buffered by U367 onto the W-MOD bus. BAL R304 / R305.
 - LFO: a 2030 (U371) with **C335 0.01 uF** (not 1000 pF), its rate CV through **R368 75k** into U372 (R371 100k, R370 100k from -15 V:
   15 - 1.33 x CV), then R377 54.9k / R381 1k to BASE, R382 2.21M reference. As read, 13.3 octaves over the pot, which puts the sheets'
-  LFO 6.5 near 0.8 Hz: implausible for vibrato, so a value or the 2030's frequency formula is misread. **Open**; the engine keeps its LFO.
+  LFO 6.5 near 0.8 Hz. Re-read at 3x (2026-11-22): every value stands (R368 75k, R371 100k, R370 100k, R377 54.9k, R381 1k, C335 0.01
+  uF poly, R382 2.21M; Q308 discharges C335, "required for low-frequency operation", manual 2-23). Against the factory sheets it fails:
+  5-5 Helicopter (LFO 7) would chop at 1.3 Hz, 4-6 Random Arpeggiator (3.5) step at 0.05 Hz, 4-4 and 5-1 (2) at 0.01 Hz; the model 0
+  law (0.5 Hz x 2^(5.33 x pot)) gives 6.6, 1.8 and 1.1 Hz. The gap is likely upstream of U372 (the firmware's or the S&H's scaling of
+  LFO FREQ CV; only the oscillator FREQ pots are known to be halved). **Open**; the engine keeps its LFO.
 - The LFO's shapes: saw and pulse through 4066s and R385 / R386 10k, the triangle by a converter (U372, R365 10k, R355 / R362 20k, R369 15k).
 
 ## Open
@@ -158,3 +163,10 @@ against a recording.
 - The LFO's rate law (above).
 - The pitch wheel pot's end voltages (SD312, top right, near R701).
 - Whether the common glide (UNI CV) feeds the voices in poly mode (`docs/FIRMWARE.md` says unison uses the five key S&Hs).
+
+## Theory section facts (manual Section 2, PDF pp 14-49, OCR 2026-11-22)
+- "The GLIDE circuit, active only in UNISON mode" (2-22, U379): poly mode does not glide on Rev 1/2. Model 1 follows it.
+- Pulse output "0-7.5V across pull down R454 or R443" (2-23).
+- The triangle: "subtracting the sawtooth from the half-sawtooth ... and amplifying by X2" (2-23).
+- The LFO "differs by having R378/80 fix PW at 50%, and Q308 discharge C335" (2-22).
+- Autotune: four BIAS CVs per oscillator, matched at 300, 600, 1200 and 2400 Hz and used by range (2-19); not modelled.

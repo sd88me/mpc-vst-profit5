@@ -25,8 +25,11 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
 ## Known differences (circuit against engine), in proposed order
 1. **Force CPU:** model 1's Rev 2 in High is 36.2 % at five voices (2.0.0: 28.4 %), over the 30 % budget; Eco is 18.1 %. The Live III
    is far inside (10.7 %). The owner's call after listening: Eco on the Force, or a CPU round.
-2. **Wheel-Mod depths** (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the source level waits on the LFO's and pink noise's
-   amplitudes, and the LFO's rate law reads implausibly (`docs/CIRCUIT.md`, round 3). The engine keeps the 2.0.0 Wheel-Mod and LFO.
+2. **The LFO's rate and Wheel-Mod depths** (x0.549 to freq, x7.52 / x6.67 to PW, x7.52 to cutoff): the LFO as read on SD312 (13 octaves,
+   0.002-21 Hz) contradicts the factory sheets (5-5 Helicopter would chop at 1.3 Hz); the gap is probably in the CV path upstream (firmware
+   or S&H scaling). Waits on the firmware's handling of LFO FREQ, or a recording. The engine keeps the 2.0.0 Wheel-Mod and LFO.
+7. **Autotune** uses four bias CVs per oscillator by range (manual 2-19); the engine has one static residual.
+8. **Glide's range** (the CA3080 / AD820 circuit) is still the 2.0.0 assumption; its unison-only behaviour is modelled.
 3. **Noise level** into the mixer: the noise VCA on board 3 and the 5837's level are not read; model 1 keeps 2.0.0's level against the
    oscillators.
 4. **The final VCA's control law** (R474, R469, R470, BAL) is not modelled.
@@ -65,6 +68,11 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   Against round 2 (High chord): 36 of 38 programs moved; the filter envelope makes most brighter (1-1 Brass +11 semitones of spectral
   centroid, +1.3 dB); Poly-Mod programs move most (5-1 Alien -9 dB, 4-7 Sawtooth Arpeggiator -6 dB / -12 semitones, 3-8 Echo-Repeat
   +11 semitones). Not yet heard.
+- **2026-11-22, round 4 (model 1, Rev 2 only; offline):** glide works only in unison (manual 2-22: "The GLIDE circuit, active only in
+  UNISON mode"), so many sheets' glide 6.5 in poly programs is inert, as on the instrument; the pulse is 0-7.5 V (manual 2-23; DC 3.75 V).
+  The LFO reading was checked at 3x and against the sheets (above, item 2): left at model 0. Check set: model 0 304/304 identical, Rev 4
+  identical, service 0 failed, corners 256/0, SPICE 20/0, engine test (now also: no poly glide in model 1, poly glide kept in model 0) and
+  host test OK.
 - **2026-11-22: installed for listening** as "Profit-5 2 Beta" (uid Pf5B, `./build.sh beta`, next to the 2.0.0 release) on the Force
   (/sdcard/Synths, its pluginList-arm entry added, MPC.settings backed up as MPC.settings.bak-p5beta-20261122) and the Live III
   (/nvme/VST2 Plugins). MPC restarted on both; no plugin errors in the log. Not yet heard.

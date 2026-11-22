@@ -14,6 +14,7 @@ service manual, in the Lemus method (`docs/ROADMAP-accuracy.md`, `docs/CIRCUIT.m
   from the SSM 2020s' control ports (`ma_2020_ctl`).
 - The oscillators' output networks (shapes average; the triangle into osc B's node X through 3.3k; 8 Hz coupling into the mixer).
 - Poly-Mod and the filter envelope amount through their SSM 2020s (`docs/CIRCUIT.md`, round 3). Wheel-Mod and the LFO keep model 0's laws.
+- Glide only in unison (manual 2-22); the glide range is model 0's.
 Rev 4 keeps the model 0 laws.
 
 ## Rev 2 / Rev 4 switch (`P5P_REV`)

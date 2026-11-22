@@ -248,7 +248,9 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     const float glide = pot(e, P5P_GLIDE);
     /* Glide is a CA3080 OTA charging 0.1 uF (board 3 p3): a constant slew rate, its current set exponentially by the glide CV
      * (AD820 pair), with the OTA's tanh softening the last half semitone. Rate 3000 .. 10 semitones/s over the pot (range assumed). */
-    const float glide_rate = 3000.0f * powf(10.0f, -2.48f * glide) * inv, glide_on = glide >= 0.03f;
+    const float glide_rate = 3000.0f * powf(10.0f, -2.48f * glide) * inv;
+    /* model 1 (Rev 2): "The GLIDE circuit, active only in UNISON mode" (manual 2, SD312 U379): no glide in poly mode */
+    const int glide_on = glide >= 0.03f && !(circ(e) && !sw(e, P5P_UNISON));
     const int fkbd = sw(e, P5P_F_KBD), kbd_half = sw(e, P5P_KBD_HALF);
     const float vel_f = touch ? e->p[P5P_VEL_FILT] : 0, vel_a = touch ? e->p[P5P_VEL_AMP] : 0;
     const float at_f = touch ? e->p[P5P_AT_FILT] : 0, at_l = touch ? e->p[P5P_AT_LFO] : 0;
@@ -319,11 +321,11 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 if (b_tri) ob += bt;
                 if (b_pul) ob += bp;
                 if (cm) {
-                    /* model 1, osc B's output network (SD411, voices 3/4): saw (0..10 V) and pulse (-1.4..6.2 V) through 10k each into
+                    /* model 1, osc B's output network (SD411, voices 3/4): saw (0..10 V) and pulse (0..7.5 V, manual 2-23) through 10k each into
                      * R434 200k and the U442 buffer, then R438 10k to node X; the triangle (+-5 V) into X through R433 3.3k. X feeds the
                      * P-MOD OSC B VCA (DC coupled) and, through C408 / 200k (8 Hz), the mixer VCA */
                     int m = b_saw + b_pul;
-                    float yb = m ? (5 * (bs + bp) + 5.0f * b_saw + 2.4f * b_pul) / (m + 0.05f) : 0;
+                    float yb = m ? (5 * (bs + bp) + 5.0f * b_saw + 3.75f * b_pul) / (m + 0.05f) : 0;
                     float xb = b_tri ? 0.2481f * yb + 0.7519f * 5 * bt : yb;
                     x->pmx = xb;
                     x->hpb += e->hp8 * (xb - x->hpb);
@@ -349,7 +351,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                     /* model 1, osc A's output network: saw and pulse through 10k each (R456, R457) into C409 / R481 200k (8 Hz): the
                      * shapes average (1 / (n + 0.05) each) rather than add */
                     int na = a_saw + a_pul;
-                    float va = na ? (5 * oa + 5.0f * a_saw + 2.4f * a_pul) / (na + 0.05f) : 0;
+                    float va = na ? (5 * oa + 5.0f * a_saw + 3.75f * a_pul) / (na + 0.05f) : 0;
                     x->hpa += e->hp8 * (va - x->hpa);
                     x->mixa = va - x->hpa;
                 }

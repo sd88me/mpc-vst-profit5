@@ -130,6 +130,7 @@ int main(void) {
         int t[2];
         for (int j = 0; j < 2; j++) {
             p5_init(&E, FS); plain(&E, 0, 0); p5_set(&E, P5P_GLIDE, 0.8f); p5_set(&E, P5P_NVOICES, 0);
+            p5_set(&E, P5P_UNISON, 1);                     /* model 1, Rev 2: the glide circuit works only in unison (manual 2) */
             p5_note_on(&E, 48, 1); p5_render(&E, buf, 64);
             p5_note_on(&E, j ? 72 : 60, 1);
             int n = 0;
@@ -139,6 +140,14 @@ int main(void) {
         double ratio = (double)t[1] / t[0];
         printf("glide: 12 semitones %.0f ms, 24 semitones %.0f ms (ratio %.2f)\n", 1e3 * t[0] / FS, 1e3 * t[1] / FS, ratio);
         assert(ratio > 1.8 && ratio < 2.2);
+        /* and not in poly mode on Rev 2 (model 1); model 0 and Rev 4 keep their poly glide */
+        for (int m = 0; m < 2; m++) {
+            p5_init(&E, FS); E.model = m; plain(&E, 0, 0); p5_set(&E, P5P_GLIDE, 0.8f); p5_set(&E, P5P_NVOICES, 0);
+            p5_note_on(&E, 48, 1); p5_render(&E, buf, 64); p5_note_on(&E, 60, 1); p5_render(&E, buf, 64);
+            float d = fabsf(E.v[E.rr].semis - E.v[E.rr].semis_target);
+            printf("poly glide, model %d: %.2f semitones still to go after 1.3 ms\n", m, d);
+            assert(m ? d < 0.01f : d > 1);
+        }
     }
     puts("ok");
     return 0;
