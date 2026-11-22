@@ -11,9 +11,12 @@
 
 #define C0_HZ 16.3516f      /* frequency 0 puts the lowest key on C0 (manual 4.1-4.3) */
 #define KEY_LOW 36          /* MIDI note of the lowest key */
-/* model 1 filter trim (manual 4-17, the INIT FREQ trim R407): octaves added so the Rev 2 filter rings at 440 Hz on C3 at cutoff
- * 3.083 V and full resonance; set by tools/service_check.c (its 4-17 case) */
-#define CUT_TRIM 0.0601f    /* log2(440 / 422.05): untrimmed, C3 rang at 422.05 Hz (2026-11-22) */
+/* model 1 filter trims (manual 4-17): the Rev 2 filter rings at 440 Hz on C3 and 1760 Hz on C5 at cutoff 3.083 V and full
+ * resonance. Set by tools/service_trim.py (2026-11-22, with ma_vcf2040). */
+#define CUT_TRIM -0.02460f   /* octaves (R407 INIT FREQ) */
+#define CUT_KV 1.00679f     /* x the cutoff CV (R406 V/OCT; its range is 1.000-1.098) */
+/* model 1: H (volts) to the engine's level: 0.45 (2.0.0's open filter, one saw at mix 10) / (20 x 0.272 V) */
+#define VCF_OUT (0.45f / (20 * 0.02906f * 9.35f))
 #define CTL_MASK 15         /* control-rate work every 16 internal samples */
 
 /* ---- voicing constants per revision (docs/ENGINE.md, "Rev 2 / Rev 4") ---- */
@@ -91,6 +94,7 @@ static void set_rate(p5_engine_t *e) {
     e->os = sw(e, P5P_QUALITY) ? 2 : 1;
     e->fsi = e->fs * e->os;
     e->pink_c = 1 - expf(-6.2831853f * 159.0f / e->fsi);
+    e->hp16 = ftan(3.14159265f * 15.915f / e->fsi);           /* C413 / R471 */
     for (int i = 0; i < 10; i++) ma_cv_init(&e->cv[i], 0.002f, e->fsi);    /* S&H + CV filter RC, about 2 ms */
     for (int v = 0; v < P5_VOICES; v++)
         for (int d = 0; d < 3; d++) ma_drift_init(&e->v[v].drift[d], 7 * v + d + 1, e->fsi / (CTL_MASK + 1));
@@ -268,6 +272,10 @@ void p5_render(p5_engine_t *e, float *out, int n) {
             float wm_src = lfo * (1 - wm_mix) + e->pink * 6 * wm_mix;   /* 2020 crossfade on SOURCE MIX, then the wheel pot */
             float wm = wm_src * clampf(e->wheel + e->p[P5P_LFO_INIT] + at_l * maxp, 0, 1);
             int ctl = (e->ctl++ & CTL_MASK) == 0;
+            if (cm && ctl) {   /* model 1: the 2020s' control currents (mixer 39k, resonance 30k), at the control rate */
+                for (int k = 0; k < 3; k++) e->vca[k] = ma_2020_ctl(10 * c[3 + k], 39e3f) * (39e3f * 0.02906f);
+                e->vca[3] = ma_2020_ctl(10 * c[1], 30e3f) * (1e4f / 14);
+            }
             const float k = 4.4f * c[1];
             float sum = 0;
             for (int v = 0; v < nv; v++) {
@@ -319,10 +327,25 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 /* cutoff: 450 Hz at pot 6 on the lowest key with KBD on (manual 3.4), 10.5 octaves over the pot (assumption) */
                 /* model 1: 10 octaves over the pot (FILT SUM CV 0-10 V at ~1 oct/V, SD312 / SD411) and trimmed as manual 4-17: cutoff
                  * CV 3.083 V on C3 (36 semitones up) rings at 440 Hz; CUT_TRIM is the 2040 model's ring / cutoff ratio at full resonance */
-                float oct = (cm ? 10.0f * (c[0] - 37 / 120.0f) - 3 - 0.03242f + CUT_TRIM : 10.5f * (c[0] - 0.6f)) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + 8 * c[2] * fe
+                float oct = (cm ? 10.0f * (c[0] - 37 / 120.0f) - 3 - 0.03242f : 10.5f * (c[0] - 0.6f)) + (fkbd ? x->semis * (kbd_half ? 1.0f / 24 : 1.0f / 12) : 0) + 8 * c[2] * fe
                           + (pm_fi ? 6 * pm_src + 5 * pm_b : 0) + (wm_fi ? 3 * wm : 0) + at_f * 3 * x->press
                           + vint * (r->drift_cut_oct * x->dr[2] + r->tol_cut_oct * x->tol[5]);
+                if (cm) oct = CUT_KV * oct + CUT_TRIM;    /* R406 V/OCT and R407 INIT FREQ, trimmed as manual 4-17 */
                 float hz = clampf(450.0f * fexp2(oct), 8, 0.4f * fsi);
+                if (cm) {
+                    /* model 1: the filter section as a circuit (ma_vcf2040; docs/CIRCUIT.md, circuits/vcf2040.cir). The mixer's current
+                     * into IN1 (x 10k, volts): each 2020's I_c from its CV through 39k and its diode-wired control port (ma_2020_ctl, ~(CV -
+                     * 0.65) / 39k above 1 V), the osc (+-5 V saw) x0.952 into its input, the bus (100k || 200k) into R476: 0.02906 V per
+                     * 39k x I_c per unit of osc (0.272 V for one osc at 10). Noise keeps its 2.0.0 level against the oscillators (its
+                     * source level is not read yet). The resonance VCA: kres = 10k I_c / 14, I_c through 30k. Circuit noise (about 10 uV)
+                     * starts the self-oscillation. e->vca[] is updated at the control rate. */
+                    float xin = e->vca[0] * oa + e->vca[1] * ob + e->vca[2] * white * 0.8f + 1e-5f * rnd(&e->rng);
+                    float kr = e->vca[3];
+                    float h = ma_vcf2040(&x->vcf, ftan(3.14159265f * hz * inv), e->hp16, kr, xin, &e->diag_unconv);
+                    if (!(h == h) || fabsf(h) > 20) { memset(&x->vcf, 0, sizeof x->vcf); e->diag_nan++; h = 0; }
+                    sum += h * VCF_OUT * ae;           /* H through the final VCA: one saw at mix 10, open, as loud as 2.0.0 */
+                    continue;
+                }
                 float g = ftan(3.14159265f * hz * inv), G0 = g / (1 + g);
                 if (k > 3.6f) { in += ma_selfosc_seed(&e->rng, k, 3.6f); if (x->kick) in += 0.01f; }
                 x->kick = 0;

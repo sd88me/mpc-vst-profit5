@@ -1,0 +1,19 @@
+* Rev 2 filter, self-oscillation at RES 10 (I_c = (10 - 0.65) / 30k = 311.7 uA) and at CONT 0 (I_ABC 10.28 uA): kicked by a
+* 1 uA, 0.1 ms pulse into IN1. Reports the frequency and peak of OUT4 and F once settled.
+.include vcf2040.cir
+Ikick 0 in1 PULSE(0 1u 1m 1u 1u 0.1m 1)
+.control
+set noaskquit
+foreach icv 311.7u 290u
+  alterparam ic = $icv
+  reset
+  tran 2u 400m 300m uic
+  meas tran t1 when v(o4)=0 rise=5
+  meas tran t2 when v(o4)=0 rise=55
+  meas tran pk4 max v(o4)
+  meas tran pkf max v(f)
+  let fosc = 50/(t2-t1)
+  echo "OSC $icv $&fosc $&pk4 $&pkf"
+end
+.endc
+.end

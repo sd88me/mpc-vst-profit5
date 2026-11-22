@@ -3,6 +3,17 @@
 Started 2026-10-20, offline only (x86 tests under ASan/UBSan; no device yet). Each law below is marked with its source: **manual** (Rev 1 service manual),
 **firmware** (v7.0 disassembly), **sheets** (factory patch sheets) or **assumed** (a placeholder until measured on a real unit or a recording).
 
+## Model versions (2026-11-22, offline)
+The laws below are **model 0**, the 2.0.0 sound, which every project saved before model 1 keeps (bit-identical; the state string's
+"m<n>" token, absent = 0). **Model 1** (new instances) replaces them for **Rev 2 only** with laws derived from the schematics and the
+service manual, in the Lemus method (`docs/ROADMAP-accuracy.md`, `docs/CIRCUIT.md`, `docs/improvements.md`):
+- Osc B LO FREQ 5 octaves; osc B fine 1.2 semitones (SD312).
+- Cutoff 10 octaves over the pot, trimmed so C3 rings at 440 Hz and C5 at 1760 Hz at cutoff 3.083 V (manual 4-17).
+- Envelopes: SSM 2050 at 2 V per decade, the x1.1 S&H modification, 0.9 s attack at 6.250 V (4-10, 4-11), 1 ms .. 100 s.
+- The filter section as a circuit (`ma_vcf2040`, checked against ngspice in `tools/spice_check.py`), with the mixer and resonance levels
+  from the SSM 2020s' control ports (`ma_2020_ctl`).
+Rev 4 keeps the model 0 laws.
+
 ## Rev 2 / Rev 4 switch (`P5P_REV`)
 One switch changes everything that differs between the two voicings. Rev 2 is modelled from the schematics. Rev 4 is modelled from the public
 description of the reissue, not from a unit or its schematics.

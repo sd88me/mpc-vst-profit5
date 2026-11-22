@@ -63,6 +63,28 @@ iin = abs(float(re.findall(r'^i\(vin1\) = ([-+0-9.eE]+)', m, re.M)[0]))
 check('mixer: one osc at 10, 2040 stage level (V)', '%.3f' % (iin * 10e3), '0.45 x level into a +-1.4 tanh', 'open',
       'stage outputs swing +-1 V (datasheet); docs/improvements.md')
 
+# 8. the filter as a circuit: ma_vcf2040 (analog/mpc_analog_p5.h) against ngspice of the same circuit (circuits/vcf2040*.cir)
+def num(v):
+    m = {'p': 1e-12, 'n': 1e-9, 'u': 1e-6, 'm': 1e-3, 'k': 1e3}
+    return float(v[:-1]) * m[v[-1]] if v[-1] in m else float(v)
+def rows(text, tag):
+    return [[num(v) for v in l.split()[1:]] for l in text.splitlines() if l.startswith(tag + ' ')]
+sp_ac, sp_osc = rows(run('vcf2040_ac.cir'), 'ROW'), rows(run('vcf2040_osc.cir'), 'OSC')
+exe = os.path.join(HERE, '..', 'build', 'vcf_compare')
+os.makedirs(os.path.dirname(exe), exist_ok=True)
+subprocess.run(['gcc', '-O2', '-std=c11', '-I' + os.path.join(HERE, '..', 'analog'), os.path.join(HERE, '..', 'tools', 'vcf_compare.c'),
+                '-lm', '-o', exe], check=True)
+for fs in ('48000', '96000'):
+    out = subprocess.run([exe, fs], capture_output=True, text=True).stdout
+    k_ac, k_osc = rows(out, 'ROW'), rows(out, 'OSC')
+    worst = max(abs(a / b - 1) for sr, kr in zip(sp_ac, k_ac) for a, b in zip(kr[1:4], sr[1:4]))
+    check('filter circuit @%s: gains at 20/30/566 Hz, 5 resonances' % fs, 'worst %.3f %%' % (100 * worst), 'ma_vcf2040', worst < 0.005)
+    check('filter circuit @%s: -3 dB at RES 0 (Hz)' % fs, '%.1f' % sp_ac[0][4], '%.1f' % k_ac[0][4], abs(k_ac[0][4] / sp_ac[0][4] - 1) < 0.002)
+    check('filter circuit @%s: self-osc at RES 10 (Hz, V)' % fs, '%.2f / %.4f' % (sp_osc[0][1], sp_osc[0][2]),
+          '%.2f / %.4f' % (k_osc[0][1], k_osc[0][2]), abs(k_osc[0][1] / sp_osc[0][1] - 1) < 0.002 and abs(k_osc[0][2] / sp_osc[0][2] - 1) < 0.01)
+    unc = int(out.split('unconverged samples:')[1].split()[0])
+    check('filter circuit @%s: unconverged samples' % fs, '0', str(unc), unc == 0)
+
 w = max(len(x[0]) for x in results)
 bad = nopen = 0
 for what, c, e, ok, note in results:

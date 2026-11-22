@@ -1,6 +1,6 @@
 /* Corners (docs/improvements.md, check set): every control at its extremes and random settings, both revisions and qualities, keys at
  * both ends of MIDI, jumps and sweeps of cutoff and resonance while playing. Fails on a non-finite or unbounded sample, or on a filter
- * reset (diag_nan). gcc -O2 -std=c11 -fsanitize=address,undefined test/test_corners.c src/engine.c -lm && ./a.out */
+ * reset (diag_nan) or an unconverged filter solve (diag_unconv). gcc -O2 -std=c11 -fsanitize=address,undefined test/test_corners.c src/engine.c -lm && ./a.out */
 #include <stdio.h>
 #include <math.h>
 #include <stdint.h>
@@ -25,6 +25,7 @@ static void run(const char *what, int blocks, int sweep) {
             if (!isfinite(buf[i]) || fabsf(buf[i]) > 1.0001f) { printf("FAIL %s: sample %g\n", what, buf[i]); bad++; return; }
     }
     if (E.diag_nan) { printf("FAIL %s: %u filter resets\n", what, E.diag_nan); bad++; }
+    if (E.diag_unconv) { printf("FAIL %s: %u unconverged filter solves\n", what, E.diag_unconv); bad++; }
 }
 
 static void keys(void) {

@@ -43,6 +43,7 @@ typedef struct {
     float tol[8];                       /* static per-voice tolerances (-1..1) */
     float tri_sym;
     int kick;
+    ma_vcf2040_t vcf;                   /* model 1 filter section (analog/mpc_analog_p5.h) */
 } p5_voice_t;
 
 typedef struct {
@@ -62,6 +63,9 @@ typedef struct {
     int ctl;                            /* control-rate counter */
     float pink, pink_c;
     uint32_t diag_nan;
+    uint32_t diag_unconv;               /* model 1 filter: samples whose implicit solve did not converge */
+    float hp16;                         /* model 1 filter: tan(pi 15.9 Hz / fsi) */
+    float vca[4];                       /* model 1: mixer A, B, noise levels and kres, from the 2020s' control currents */
     int model;                          /* model version (docs/improvements.md): 0 = the 2.0.0 laws, kept for old projects; new
                                            instances get P5_MODEL_LATEST. Saved in the state string as "m<n>" */
 } p5_engine_t;

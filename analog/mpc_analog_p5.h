@@ -106,3 +106,92 @@ static inline float ma_tol(unsigned voice, unsigned part) {
     h ^= h >> 15; h *= 0x2C1B3C6Du; h ^= h >> 12;
     return (float)(int32_t)h * (1.0f / 2147483648.0f);
 }
+
+/* ---- SSM 2020 control port wired as a diode (control collector and both bases tied, emitter grounded) fed through R from a CV ----
+ * Solves CV = I R + V_T ln(I / I_s) for I (A) by Newton from the larger of the two asymptotes. ASSUMED: I_s = 2.5e-15 A, so the
+ * transistor drops 0.65 V at 240 uA (a typical small NPN; the datasheet gives none). Below about 0.5 V the current falls off
+ * exponentially instead of stopping. */
+static inline float ma_2020_ctl(float cv, float r) {
+    const float vt = 0.025693f, is = 2.5e-15f;
+    float i = cv > 0.7f ? (cv - 0.65f) / r : is * expf(fminf(cv, 0.7f) / vt) * 0.5f;
+    if (i < 1e-15f) i = 1e-15f;
+    for (int k = 0; k < 6; k++) {                   /* f(i) = i r + vt ln(i / is) - cv, f' = r + vt / i */
+        float fx = i * r + vt * logf(i / is) - cv, d = fx / (r + vt / i);
+        i -= d;
+        if (i < 1e-15f) i = 1e-15f;
+        if (fabsf(d) < 1e-4f * i) break;
+    }
+    return i;
+}
+
+/* ---- SSM 2040 filter section as a circuit (Rev 2 voice SD411; docs/CIRCUIT.md "Filter", circuits/vcf2040.cir) ----
+ * Four 2040 lowpass real-pole cells (datasheet Fig. 1): an OTA I = I_ABC tanh(V_IN / 2 V_T) into 1000 pF, a unity buffer, IN on a
+ * 10k / 10k / 200 ohm network (stage 1: no R1; its input is a current). The swing is limited to +-1 V at CAP (datasheet: OUT swings
+ * +-1 V; where the chip limits is assumed). OUT4 drives U479 (x20, clipped at +-13.5 V) = F; F through C413 0.1 uF / R471 100k
+ * (15.9 Hz) is H, which feeds the final VCA and the RES FDBK VCA (SSM 2020: I_c H / 14 V into IN1).
+ * Voltages are the circuit's. Inputs per sample: w0 = the cells' small-signal pole (2 pi f, rad/s; the 2040's I_ABC scales it),
+ * kres = 10k I_c / 14 V (the loop gain is 20 kres: 4.45 at RES 10), x = the mixer's current into IN1 times 10k (volts).
+ * Each sample is solved implicitly: the tanh of each cell is linearised (tanh z / z) at the last estimate, the linear zero-delay
+ * loop is solved exactly, and that repeats until no cell's gain moves by 1e-5 (at most MA_VCF_ITER passes; *unconv counts the
+ * rest). Returns H (volts). s[0..3]: the cells' integrator states, s[4]: the high-pass state. */
+#define MA_VCF_ITER 8
+typedef struct { float s[5], q[4], o4; } ma_vcf2040_t;   /* q: each cell's tanh(z) / z at its last operating point; o4: OUT4 (probe) */
+static inline float ma_tanhz_z(float z) {                 /* tanh(z) / z, 1 near 0 */
+    float a = fabsf(z);
+    if (a < 1e-3f) return 1.0f;
+    if (a > 9.0f) return 1.0f / a;
+    float e = expf(-2 * a);
+    return (1 - e) / ((1 + e) * a);
+}
+static inline float ma_vcf2040(ma_vcf2040_t *f, float g0, float gh, float kres, float x, uint32_t *unconv) {
+    /* g0 = tan(w0 T / 2) (prewarped at the small-signal pole), gh = tan(w_hp T / 2); the cells' u / 2 V_T scale per volt of
+     * (in + out): r / 10k / (2 V_T) with r = 192.3 ohm (stages 2-4) and 196.1 ohm (stage 1) */
+    const float kz = 192.31f / 10000.0f / (2 * 0.025693f), kz1 = 196.08f / 10000.0f / (2 * 0.025693f);
+    const float w1 = 196.08f / 192.31f;                  /* stage 1's pole against the others' (its IN node lacks R1) */
+    if (f->q[0] == 0) f->q[0] = f->q[1] = f->q[2] = f->q[3] = 1;   /* a cleared state: the cells at rest */
+    float Gh = gh / (1 + gh), y[4], xin = x, F = 0, H = 0, G[4];
+    int it;
+    for (it = 0; it < MA_VCF_ITER; it++) {
+        float S[4], A = 1, B = 0;
+        for (int i = 0; i < 4; i++) {
+            float g = g0 * (i ? 1.0f : w1) * f->q[i];
+            G[i] = g / (1 + g);
+            S[i] = (1 - G[i]) * f->s[i];
+            A *= G[i];
+            B = -G[i] * B + S[i];                         /* y_i = -G_i y_(i-1) + S_i: B is y4 with the input at 0 */
+        }
+        /* x1 = x + kres H, H = (1 - Gh) (F - s_h), F = -20 y4 (unless clipped); y4 = A x1 + B */
+        float c = kres * (1 - Gh);
+        float n4 = (A * (x - c * f->s[4]) + B) / (1 + 20 * c * A);
+        F = -20 * n4;
+        if (F > 13.5f || F < -13.5f) F = F > 0 ? 13.5f : -13.5f;
+        H = (1 - Gh) * (F - f->s[4]);
+        xin = x + kres * H;
+        /* the cells' operating points this solution gives; converged when none of their gains moves (another pass would
+         * return the same solution) */
+        float z[4], q[4], dq = 0;
+        y[0] = -G[0] * xin + S[0];
+        z[0] = kz1 * (xin + y[0]);
+        for (int i = 1; i < 4; i++) { y[i] = -G[i] * y[i - 1] + S[i]; z[i] = kz * (y[i - 1] + y[i]); }
+        for (int i = 0; i < 4; i++) q[i] = ma_tanhz_z(z[i]);          /* independent: they overlap */
+        for (int i = 0; i < 4; i++) { float d = fabsf(q[i] - f->q[i]); if (d > dq) dq = d; f->q[i] = q[i]; }
+        if (dq < 1e-4f) break;
+    }
+#ifdef MA_VCF_COUNT
+    extern unsigned long ma_vcf_passes, ma_vcf_samples; ma_vcf_passes += it + (it < MA_VCF_ITER); ma_vcf_samples++;
+#endif
+    if (it == MA_VCF_ITER) ++*unconv;
+    /* commit with the gains the solution used: the cells' states (CAP limited to +-1 V), the high-pass state */
+    float prev = xin;
+    for (int i = 0; i < 4; i++) {
+        float v = (-prev - f->s[i]) * G[i], yy = v + f->s[i];
+        if (yy > 1) yy = 1; else if (yy < -1) yy = -1;
+        f->s[i] = yy + v;
+        if (f->s[i] > 1) f->s[i] = 1; else if (f->s[i] < -1) f->s[i] = -1;
+        prev = yy;
+    }
+    f->o4 = prev;
+    float vh = (F - f->s[4]) * Gh;
+    f->s[4] = vh + (vh + f->s[4]);
+    return H;
+}
