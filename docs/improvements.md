@@ -98,11 +98,19 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
    them is documented to estimate from.
 11. **Force CPU for Rev 4:** Live III Rev 4 High 8.1 -> 11.4 %; the Force (offline on 2026-11-23) is estimated near 40 % in High.
 
+## Done (continued)
+- **2026-11-23, round 7 (model 1, Rev 4): the CEM 3320 datasheet.** It confirms every constant taken from the V3320 clone (I_ref 63 uA,
+  60 mV/decade, gain 0.9 / 3.0, 1M output resistance, Q input 3.6k, 12 Vpp), and adds Fig. 6: the resonance cell's gm against its control
+  current, now in the kernel and the deck (gm = 2.24 mmho x I / (I + 122.5 uA)). Rev 4's resonance is stronger (loop gain 6.2 at RES 10,
+  oscillation from about RES 5.6) and its self-oscillation louder. Retrimmed (4-20): CUT4_KV 0.99833, CUT4_TRIM +0.0707 oct. Check set: SPICE
+  28/0 (the 3320 AC cases moved to 0-25 uA, below the new onset), service 0 failed, corners 256/0, model 0 304/304 identical, Rev 2
+  unchanged, engine and host tests OK.
+
 ## Estimates in model 1 (2026-11-23, the owner's request: "include the not modelled items even as some kind of estimate")
 Each is marked ESTIMATE in `src/engine.c`, with its basis; replace it when a trace, a datasheet or a recording settles it.
 | Item | Estimate | Basis |
 |---|---|---|
-| Rev 4 Q compensation | output x (1 + k)^0.68, k the 3320 loop gain (4.8 at RES 10) | maffez.com: an SSI2164 cell (U9-D) on the Q CV adds level at the 3320's output; R274 16.2k, "more" at 10-12k, so stock is about 11/16.2 of full; a 2164 is dB-linear, so the fraction is taken in dB |
+| Rev 4 Q compensation | output x (1 + k)^0.68, k the 3320 loop gain (6.2 at RES 10) | maffez.com: an SSI2164 cell (U9-D) on the Q CV adds level at the 3320's output; R274 16.2k, "more" at 10-12k, so stock is about 11/16.2 of full; a 2164 is dB-linear, so the fraction is taken in dB |
 | Rev 4 mixer drive | one osc at 10 = 0.25 x I_ref into the 3320 | the Rev 2 circuit's headroom for one osc (0.27 of the 2040's swing); maffez's R82 169k "input limiting" |
 | Rev 2 Wheel-Mod depth | W-MOD bus 1.31 V peak (one LFO shape, wheel at 10): freq +-8.6 semitones, PW A +-9.9 V, PW B +-8.7 V, cutoff +-9.9 octaves | SD312: shapes averaged through 10k / 200k, the SOURCE MIX 2020s (10k, diode law), the bus load 8.4k, the wheel network x0.489, the summers' gains; the pink noise keeps 2.0.0's level against the LFO |
 | Rev 2 final VCA | gain = the 2020's diode-law control current through R474 15k, against its value at 10 V | the other 2020s' wiring on SD411; low sustain levels are quieter (1-3 Muted Clav, sustain 1: -7.1 dB) |

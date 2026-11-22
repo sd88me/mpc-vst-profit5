@@ -177,7 +177,7 @@ against a recording.
 - Autotune: four BIAS CVs per oscillator, matched at 300, 600, 1200 and 2400 Hz and used by range (2-19); not modelled.
 
 ## Rev 3 filter (TM1000D, voice 2 SD432, IA scan PDF p. 51; the model 1 "Rev 4" setting) - read 2026-11-23
-Chip law from the V3320 datasheet (the CEM 3320's pin-compatible clone; `docs/SOURCES.md`): each section is a current-in, current-out cell,
+Chip law from the CEM 3320 datasheet (Curtis, 1980; the V3320 clone's gives the same constants; `docs/SOURCES.md`): each section is a current-in, current-out cell,
 I_out = (I_ref - I_in) A e^(-Vc/V_T), I_ref = (0.46 Vcc - 0.65) / 100k (63 uA), into its pole cap and a buffer (quiescent 0.46 Vcc =
 6.9 V, swing Vcc - 3 V peak to peak); the cell's 1M output resistance reflects across the feedback resistor; frequency control 60 mV per
 decade (18 mV/oct), positive lower; the Q VCA: signal input 3.6k to ground (AC coupled), gm 1 mmho at 100 uA of control current into a
@@ -188,10 +188,14 @@ low-impedance node, its output into stage 1.
 - **Input:** the mixer's CA3280 current outputs (U465: osc A saw through R4373 150k / R4372 330, pulse into the inverting input through
   R4375 200k / R4374 330, osc B through R4244 / R4245 150k / R4379 330; bias through R4377 / R4378 3.3k from MIX AMT CV) and NOISE through
   R4376 100k, straight into IN A. The CA3280s' bias law (Rev 3's CV scheme) is not resolved, so the drive is **assumed** (below).
+- **The resonance cell's gm** is not linear in its control current (CEM 3320 sheet, "a modified linear scale", Fig. 6): digitised at 300
+  dpi and fitted, **gm = 2.24 mmho x I / (I + 122.5 uA)** (within 14 umho over 25-300 uA; the figure's "MAX GM" line reads 2.23 mmho;
+  1.0 mmho at 100 uA, the typical). The cell is a "traditional transconductance" amplifier: output -I_cr tanh(v gm / I_cr). At Rev 3's
+  50 uA (RES 10) gm is 0.65 mmho, not the 0.5 of a straight line: the loop gain at RES 10 is 6.2 and oscillation starts near RES 5.6
+  (with the nominal 3.6k Q input; the sheet allows +-900 ohm).
 - **Output and resonance:** OUT D through **C4165 2.2 uF / R4468 68k** (1.06 Hz) into U475 (TL082, **x3.4**: R4506 240k / R4505 100k);
   U475 feeds the final VCA and, through **R4425 51k**, Q IN (R4424 3k + C4146 10 uF to ground, with the pin's 3.6k: x0.0311 above about
-  25 Hz). Q CNTL from FILT RES CV through **R4423 200k** (50 uA at 10 V). Loop gain 90.9k x (I_cr / 0.1 V) x 0.0311 x 3.4: 4.8 at RES
-  10, oscillation from about RES 8.3.
+  25 Hz). Q CNTL from FILT RES CV through **R4423 200k** (50 uA at 10 V). Loop gain 90.9k x gm(I_cr) x 0.0311 x 3.4 (above).
 - **Cutoff:** FILT FREQ SMR U434 (LM348): FILT S/H, FILT SUM CV and the Poly-Mod (R4180 54.9k) into R4146 162k + FIL SCALE R4134 50k ||
   C468 .001, then R4466 187k / 1.82k (9.64 mV per volt) to Fc CNTL, offset by F OFF (R4504 100k via R4503 249k): about 1 oct/V once trimmed.
 - **Calibration (TM1000D 4-20):** cutoff CV 2.000 V, unison, resonance up: A3 rings at 440 Hz and A4 at 880 Hz (INIT FREQ and FILT SCALE).

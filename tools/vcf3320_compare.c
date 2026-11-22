@@ -32,7 +32,7 @@ static double gain(double icr, double f) {
 
 int main(int argc, char **argv) {
     if (argc > 1) FS = atof(argv[1]);
-    static const double ics[] = { 0, 20e-6, 35e-6, 40e-6 };
+    static const double ics[] = { 0, 10e-6, 20e-6, 25e-6 };   /* below the oscillation onset (about 28 uA) */
     for (int k = 0; k < 4; k++) {
         double f3 = 0;
         for (double f = 300; f < 600 && ics[k] == 0; f += 0.1) if (gain(0, f) < 0.7071) { f3 = f; break; }

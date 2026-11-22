@@ -2,7 +2,7 @@
 * describes them: a current-in, current-out cell (gain a, I_ref 63 uA; ASSUMED soft limit I_ref tanh(i / I_ref)) into 150 pF and a buffer,
 * the cell's 1M output impedance reflected across its 100k feedback, 91k coupling, the input held at a fixed potential (a 0 V source
 * here: signals only). The buffers' swing is +-6 V. OUT D -> 2.2 uF / 68k -> U475 x3.4 (+-13.5 V) -> 51k -> Q IN (3.6k, and 3k + 10 uF)
-* -> the Q VCA: -I_cr tanh(v / 0.1 V) into stage 1. Inputs: imix (AC, A) into stage 1; parameters a (the cells' gain: the pole) and icr.
+* -> the Q VCA: -I_cr tanh(v gm / I_cr) into stage 1. Inputs: imix (AC, A) into stage 1; parameters a (the cells' gain: the pole) and icr.
 .param a=0.0857 icr=0 iref=63u c=150p
 Iin 0 n1 DC 0 AC 1e-5
 * stage 1
@@ -46,4 +46,5 @@ R4425 vb q 51k
 RQIN q 0 3.6k
 R4424 q qc 3k
 C4146 qc 0 10u
-BQ 0 n1 I=-{icr}*tanh(v(q)/0.1)
+* the Q VCA: gm = 2.24 mmho x I_cr / (I_cr + 122.5 uA) (CEM 3320 datasheet Fig. 6, fitted), output saturating at I_cr
+BQ 0 n1 I=-{icr}*tanh(v(q)*2.24m/({icr}+122.5u))

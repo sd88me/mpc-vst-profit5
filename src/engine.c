@@ -18,8 +18,8 @@
 /* model 1: H (volts) to the engine's level: 0.45 (2.0.0's open filter, one saw at mix 10) / (20 x 0.272 V) */
 #define VCF_OUT (0.45f / (20 * 0.02906f * 9.35f))
 /* model 1, Rev 4 (3320) filter trims (Rev 3 manual 4-20: cutoff CV 2.000 V, A3 rings at 440 Hz and A4 at 880 Hz); tools/service_trim.py */
-#define CUT4_TRIM 0.03641f
-#define CUT4_KV 0.99826f
+#define CUT4_TRIM 0.07067f
+#define CUT4_KV 0.99833f
 /* model 1, Rev 4: one osc at 10 puts 0.25 x I_ref (63 uA) into stage 1 (ASSUMED: the Rev 3 CA3280 and Rev 4 SSI2164 mixer gains are not
  * read); x 90.9k gives the kernel's volts. Output: U475 to the engine's level, one saw at mix 10 through an open filter as loud as 2.0.0 */
 #define VCF3_IN (0.25f * 63e-6f * 90.9e3f)
@@ -303,7 +303,10 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 wmv = 1.31f * (lfo_v * e->vca[7] + e->pink * 6 * e->vca[8]) * clampf(e->wheel + e->p[P5P_LFO_INIT] + at_l * maxp, 0, 1);
             }
             int ctl = (e->ctl++ & CTL_MASK) == 0;
-            if (c4 && ctl) e->qcomp4 = powf(1 + 96.1e3f * 10 * c[1] / 200e3f, 0.68f);   /* Rev 4 Q compensation (ESTIMATE, below) */
+            if (c4 && ctl) {   /* Rev 4 Q compensation (ESTIMATE, below): k = 90.9k x gm(I_cr) x 0.0311 x 3.4, gm the 3320 sheet's Fig. 6 */
+                float icr = 10 * c[1] / 200e3f;
+                e->qcomp4 = powf(1 + 9611 * 2.24e-3f * icr / (icr + 122.5e-6f), 0.68f);
+            }
             if (cm && ctl) {   /* model 1: the 2020s' control currents (mixer 39k, resonance 30k), at the control rate */
                 for (int k = 0; k < 3; k++) e->vca[k] = ma_2020_ctl(10 * c[3 + k], 39e3f) * (39e3f * 0.02906f);
                 e->vca[3] = ma_2020_ctl(10 * c[1], 30e3f) * (1e4f / 14);

@@ -2,7 +2,7 @@
 .include vcf3320.cir
 .control
 set noaskquit
-foreach icv 0 20u 35u 40u
+foreach icv 0 10u 20u 25u
   alterparam icr = $icv
   reset
   ac dec 2000 5 20k

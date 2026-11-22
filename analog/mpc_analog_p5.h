@@ -199,12 +199,13 @@ static inline float ma_vcf2040(ma_vcf2040_t *f, float g0, float gh, float kres, 
 }
 
 /* ---- CEM 3320 filter section as a circuit (Rev 3 voice SD432, TM1000D; the Rev 4 reissue's "Rev 3" filter; circuits/vcf3320.cir) ----
- * Four 3320 sections (V3320 datasheet, the CEM 3320's pin-compatible clone): a current-in, current-out gain cell into its pole cap and
+ * Four 3320 sections (the CEM 3320 datasheet, 1980; the V3320 clone's gives the same constants): a current-in, current-out gain cell into its pole cap and
  * a buffer; I_out = (I_ref - I_in) A e^(-Vc/V_T), I_ref = 63 uA. Rev 3's network: 100k feedback (90.9k with the cell's reflected 1M),
  * 91k coupling (stage gain -0.999), the inputs' DC balanced by 240k from -15 V; stage 1's input is a current (the mixer, the Q VCA).
  * ASSUMED: each cell's input current limits softly at +-I_ref (I_ref tanh(i / I_ref)); the buffers' swing +-6 V around 6.9 V (Vcc - 3 V
  * peak to peak). Resonance: OUT D through 2.2 uF / 68k (1.06 Hz) into U475 (x3.4, +-13.5 V), then 51k into Q IN (3.6k || 3k: x0.0311);
- * the Q VCA gives -I_cr tanh(v / 0.1 V) (gm 1 mmho at 100 uA) into stage 1. Voltages are the circuit's, against the quiescent point.
+ * the Q VCA gives -I_cr tanh(v gm / I_cr) into stage 1, gm = 2.24 mmho I_cr / (I_cr + 122.5 uA) (the CEM 3320 sheet's Figure 6, fitted
+ * within 14 umho; 1.0 mmho at 100 uA, its typical). Voltages are the circuit's, against the quiescent point.
  * Inputs per sample: g0 = tan(w0 T / 2) (the stages' small-signal pole), gh = tan(w_hp T / 2) (the 1.06 Hz coupling), icr = the Q VCA's
  * control current (A), x = the mixer's current into stage 1 times 90.9k (volts), kc = 1 - exp(-T / (10 uF x 3k)) (C4146's step, updated a
  * sample late: its corner is 2.5 Hz). Returns U475's output (volts). Solved as ma_vcf2040. */
@@ -212,7 +213,7 @@ typedef struct { float s[5], q[5], o4, vc; } ma_vcf3320_t;   /* q[0..3]: cells' 
 static inline float ma_vcf3320(ma_vcf3320_t *f, float g0, float gh, float icr, float x, float kc, uint32_t *unconv) {
     /* Q IN node: vb through 51k, 3.6k to ground, 3k to C4146: vq = qdiv vb + qoff, with qoff from C4146's voltage */
     const float rf = 90.9e3f, iref = 63e-6f, kz = 1.0f / (rf * iref), alpha = 90.9f / 91.0f, rpar = 1.0f / (1 / 51e3f + 1 / 3.6e3f + 1 / 3e3f),
-                qdiv = rpar / 51e3f, qoff = f->vc * rpar / 3e3f, vq0 = 0.1f;
+                qdiv = rpar / 51e3f, qoff = f->vc * rpar / 3e3f, vq0 = (icr + 122.5e-6f) * (1 / 2.24e-3f);   /* I_cr / gm */
     if (f->q[0] == 0) f->q[0] = f->q[1] = f->q[2] = f->q[3] = f->q[4] = 1;
     float Gh = gh / (1 + gh), y[4], xin = x, H = 0, G[4];
     int it;
