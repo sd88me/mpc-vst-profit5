@@ -27,8 +27,8 @@
 #define MAX_ALL 2048               /* imported patches in all: every one is on the BANKS page */
 #define MAX_BANKS 256              /* BANKS page: Factory 1978, then one bank per file (a .syx of more than BANK_SPLIT programs is split) */
 #define BANK_SPLIT 40              /* the Rev 4's bank size */
-#define BANK_SLOTS 7               /* bank tiles in the list (the params run to bank_slot_11; the skin shows 7) */
-#define PROG_SLOTS 24              /* program tiles a page: three columns of 8 (the params run to patch_slot_45; the skin shows 24) */
+#define BANK_SLOTS 8               /* bank tiles in the list (the params run to bank_slot_11; the skin shows 8) */
+#define PROG_SLOTS 36              /* program tiles a page: three columns of 12 (the params run to patch_slot_45; the skin shows 36) */
 #define MAX_H2P (256u << 10)       /* one patch file; a bank zip may be up to MAX_ZIP */
 #define MAX_ZIP (32u << 20)
 #define MAX_SYX (1u << 20)         /* a .syx bank: 200 programs are 32 KB */

@@ -181,7 +181,7 @@ What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written u
 |---|---|
 | **Oscillators** | Poly-Mod (filter envelope, osc 2, three destinations), LFO (initial amount, frequency, three shapes), Wheel-Mod (source mix, five destinations), oscillator 1 and 2, mixer |
 | **Filter Amp** | Glide, voices, unison, quality, filter (cutoff, resonance, envelope amount, keyboard tracking, half/full, ADSR), amplifier ADSR and release, vintage, master tune, volume, velocity and aftertouch depths |
-| **Banks** | Bank and program steppers (data wheel, Q-Links), bank list, programs 24 to a page, RANDOM, +FAV / -FAV with the naming keyboard |
+| **Banks** | Bank and program steppers (data wheel, Q-Links), bank list, programs 36 to a page, RANDOM, +FAV / -FAV with the naming keyboard |
 
 MIDI: notes with velocity, polyphonic and channel aftertouch, pitch bend (two semitones), CC 1 mod wheel, CC 64 sustain, CC 120 / 123 all off, program change.
 

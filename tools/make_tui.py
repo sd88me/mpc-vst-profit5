@@ -314,8 +314,8 @@ def build_page(name, fn, spec):
 
 
 # ---- BANKS: the bank and program lists (src/plugin.c), like Profit-08's page in this panel's look ------------------------------
-BANK_TILES = dict(n=7, x=36, y=94, w=282, h=64, pitch=74)
-PROG_TILES = dict(n=24, rows=8, x=354, y=134, w=290, h=54, pitch_x=300, pitch_y=60)
+BANK_TILES = dict(n=8, x=36, y=94, w=282, h=56, pitch=64)
+PROG_TILES = dict(n=36, rows=12, x=354, y=134, w=290, h=34, pitch_x=300, pitch_y=39)
 SAMPLE_BANKS = ["Factory 1978"] + ["P5 Factory Programs FACT %d" % i for i in range(1, 6)] + ["Repro-5"]
 SAMPLE_PROGS = ["1-1 Brass", "1-2 Low Strings", "1-3 Muted Clav", "1-4 Percussive Electric Piano", "1-5 Flutes", "1-6 Harpsichord", "1-7 Sync I",
                 "1-8 Percussive Organ", "2-1 Unison Glide With Resonance", "2-2 Harmonium", "2-3 Organ With Resonance", "2-4 Toy Piano", "2-5 Trumpet/Flute",
@@ -413,14 +413,14 @@ def build_banks(fn):
     on_b, off_b = save(tile_img(bt["w"], bt["h"], True), "tile_bank_on.png"), save(tile_img(bt["w"], bt["h"], False), "tile_bank_off.png")
     for i in range(bt["n"]):
         y, k = bt["y"] + i * bt["pitch"], "bank_slot_%d" % (i + 1)
-        p.kids.append(label(B(bt["x"] + 12, y, bt["w"] - 20, bt["h"]), P(k), h=22.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+        p.kids.append(label(B(bt["x"] + 12, y, bt["w"] - 20, bt["h"]), P(k), h=20.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
         p.kids.append(button(k, on_b, off_b, B(bt["x"], y, bt["w"] + 1, bt["h"] + 1)))
         p.sample[k] = SAMPLE_BANKS[i] if i < len(SAMPLE_BANKS) else ""
     on_p, off_p = save(tile_img(pt["w"], pt["h"], True), "tile_prog_on.png"), save(tile_img(pt["w"], pt["h"], False), "tile_prog_off.png")
     for i in range(pt["n"]):
         c, r = divmod(i, pt["rows"])
         x, y, k = pt["x"] + c * pt["pitch_x"], pt["y"] + r * pt["pitch_y"], "patch_slot_%d" % (i + 1)
-        p.kids.append(label(B(x + 10, y, pt["w"] - 16, pt["h"]), P(k), h=19.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+        p.kids.append(label(B(x + 10, y, pt["w"] - 16, pt["h"]), P(k), h=17.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
         p.kids.append(button(k, on_p, off_p, B(x, y, pt["w"] + 1, pt["h"] + 1)))
         p.sample[k] = SAMPLE_PROGS[i] if i < len(SAMPLE_PROGS) else ""
     return p
