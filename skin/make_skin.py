@@ -324,7 +324,7 @@ class Tab:
                 pass
         except OSError:
             f = font(60, True)
-        tx, ty = W // 2, H // 2 - S(2.5)
+        tx, ty = W // 2, H // 2 - S(3.5)
         lt = Image.new("L", (W, H), 0)
         ImageDraw.Draw(lt).text((tx, ty), text, font=f, fill=255, anchor="mm")
         lip = ImageChops.offset(lt, S(1.4), S(1.6))
