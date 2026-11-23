@@ -80,6 +80,37 @@ def walnut(w, h, seed=3):
     return im.filter(ImageFilter.GaussianBlur(0.6))
 
 
+def wheel_sprite(w, h, v):
+    """The MOD wheel seen edge-on at v (0 back .. 1 forward): a ribbed ivory-black rim in a slot, ribs travelling with v, a dot on the rim."""
+    sc = SS
+    im = Image.new("RGBA", (w * sc, h * sc), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((0, 0, w * sc - 1, h * sc - 1), radius=7 * sc, fill=(5, 5, 6, 255), outline=(66, 64, 60, 255), width=sc)
+    pad = 5 * sc
+    bw, bh = w * sc - 2 * pad, h * sc - 2 * pad
+    body = Image.new("RGB", (bw, bh))
+    bd = ImageDraw.Draw(body)
+    for x in range(bw):                       # round across the width
+        sh = 0.5 + 0.5 * math.sin(math.pi * (x + 0.5) / bw)
+        bd.line([(x, 0), (x, bh)], fill=(int(40 + 50 * sh), int(40 + 50 * sh), int(42 + 52 * sh)))
+    rib = 10 * sc
+    off = (v * 8 * rib) % rib
+    for y in range(-rib, bh + rib, rib):     # ribs
+        yy = int(y + off)
+        bd.line([(0, yy), (bw, yy)], fill=(14, 14, 15), width=max(1, sc))
+        bd.line([(0, yy + sc), (bw, yy + sc)], fill=(112, 110, 106), width=max(1, sc))
+    fade = Image.linear_gradient("L").resize(body.size)          # the ends roll away dark
+    fade = ImageChops.multiply(fade, ImageChops.invert(fade)).point(lambda p: min(255, p * 4))
+    body = ImageChops.multiply(body, Image.merge("RGB", (fade.point(lambda p: 70 + p * 185 // 255),) * 3))
+    mask = Image.new("L", body.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, bw - 1, bh - 1), radius=5 * sc, fill=255)
+    im.paste(body, (pad, pad), mask)
+    top, bot = pad + 12 * sc, h * sc - pad - 12 * sc
+    y = bot - v * (bot - top)
+    d.ellipse((w * sc / 2 - 4 * sc, y - 4 * sc, w * sc / 2 + 4 * sc, y + 4 * sc), fill=(234, 234, 228, 255))
+    return im
+
+
 def knob_sprite(r, silver=False):
     """A knob seen from above at 2x, pointing up (rotated per frame): knurled skirt, cap, white pointer (dark on aluminium)."""
     R = S(r)
@@ -227,6 +258,14 @@ class Tab:
             self.text(cx, cy + r + 24, label, 10.5)
         self.controls.append(dict(kind="knob", key=key, cx=cx, cy=cy, r=r, silver=silver, vs=vs, hide=hide_value))
 
+    def wheel(self, key, cx, cy, w=56, h=140, label=None):
+        """A vertical wheel (drag up / down): the slot is drawn here, the wheel itself is a filmstrip over it."""
+        d = self.d
+        d.rounded_rectangle((S(cx - w / 2 - 5), S(cy - h / 2 - 5), S(cx + w / 2 + 5), S(cy + h / 2 + 5)), radius=S(10), fill=(2, 2, 3), outline=(80, 78, 74), width=S(1.2))
+        if label:
+            self.text(cx, cy + h / 2 + 20, label, 10.5)
+        self.controls.append(dict(kind="wheel", key=key, cx=cx, cy=cy, w=w, h=h))
+
     def switch(self, key, cx, cy, w=34, label=None, color="black", above=None):
         if label:
             self.text(cx, cy + w / 2 + 12, label, 10)
@@ -278,7 +317,7 @@ class Tab:
             d.line((sx - S(4.5), sy + S(1.5), sx + S(4.5), sy - S(1.5)), fill=(40, 40, 44, 255), width=S(1.6))
         # engraved lettering: dark ink, a light lip below-right and a shadow above-left
         try:
-            f = ImageFont.truetype(PLAQUE_FONT, S(45))
+            f = ImageFont.truetype(PLAQUE_FONT, S(45 * w / 250))
             try:
                 f.set_variation_by_axes([850])
             except Exception:
@@ -349,9 +388,10 @@ def tab_osc():
     t.box(452, 420, 900, 600, "MIXER")
     for k, x, s in (("mix_a", 548, "OSC A"), ("mix_b", 676, "OSC B"), ("mix_noise", 804, "NOISE")):
         t.knob(k, x, 502, r=30, label=s)
-    t.plaque(1105, 558, "profit~5")
+    t.wheel("mod_wheel", 985, 495, label="MOD WHEEL")
+    t.plaque(1135, 566, "profit~5", w=190, h=56)
     t.qlinks = [("OSC KNOBS", ["pm_fenv", "pm_oscb", "a_freq", "a_pw", "lfo_init", "lfo_freq", "b_freq", "b_fine", "b_pw", "wm_mix", "mix_a", "mix_b", "mix_noise"]),
-                ("MOD SWITCHES", ["pm_freq_a", "pm_pw_a", "pm_filter", "lfo_saw", "lfo_tri", "lfo_square", "wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b", "wm_filter"]),
+                ("MOD SWITCHES", ["pm_freq_a", "pm_pw_a", "pm_filter", "lfo_saw", "lfo_tri", "lfo_square", "wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b", "wm_filter", "mod_wheel"]),
                 ("OSC SWITCHES", ["a_saw", "a_pulse", "a_sync", "b_saw", "b_tri", "b_pulse", "b_lo", "b_kbd"])]
     return t
 
@@ -454,10 +494,23 @@ def build(root):
         lines.append("art file=art/%s.png fit=stretch" % t.name.lower())
         for c in t.controls:
             k = c["key"]
-            if k not in params:
+            if k not in params and c["kind"] != "wheel":
                 sys.exit("skin: %s is not a parameter" % k)
-            dn = norm_default(params, k)
-            if c["kind"] == "knob":
+            dn = 0.0 if c["kind"] == "wheel" else norm_default(params, k)
+            if c["kind"] == "wheel":
+                n, w, h = 48, c["w"], c["h"]
+                strip = Image.new("RGB", (w, h * n))
+                for i in range(n):
+                    f = cut(t, c["cx"], c["cy"], w, h)
+                    sp = wheel_sprite(w, h, i / (n - 1))
+                    f.alpha_composite(sp, ((f.width - sp.width) // 2, (f.height - sp.height) // 2))
+                    fr = final(f, w, h)
+                    strip.paste(fr, (0, i * h))
+                    if i == 0:
+                        prev.alpha_composite(fr.resize((S(w), S(h))).convert("RGBA"), (S(c["cx"] - w / 2), S(c["cy"] - h / 2)))
+                strip.save(os.path.join(art, k + ".png"), optimize=True)
+                lines.append('wheel cx=%d cy=%d w=%d h=%d label="" key=%s strip=art/%s.png frames=%d' % (c["cx"], c["cy"] + Y_OFF, w, h, k, k, n))
+            elif c["kind"] == "knob":
                 side = 2 * c["r"] + 8
                 spr = knob_sprite(c["r"], c["silver"])
                 n = len(params[k]["options"]) if params[k].get("options") else FRAMES

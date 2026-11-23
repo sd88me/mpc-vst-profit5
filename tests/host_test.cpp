@@ -120,14 +120,14 @@ int main(int argc, char** argv)
     a->dispatcher(a, effGetEffectName, 0, 0, name, 0);
     CHECK(a->uniqueID == (VstInt32)P5_EXPECT_UID, "uid %08x", (unsigned)a->uniqueID);
     CHECK(!std::strcmp(name, P5_EXPECT_NAME), "name \"%s\"", name);
-    CHECK(a->numParams == 176, "176 params: the 64 of 0.2.1 + favourites and keyboard + BANKS (%d)", a->numParams);
-    CHECK(a->dispatcher(a, effGetVendorVersion, 0, 0, nullptr, 0) == 3000, "version 3000");
+    CHECK(a->numParams == 177, "177 params: the 64 of 0.2.1 + favourites and keyboard + BANKS (%d)", a->numParams);
+    CHECK(a->dispatcher(a, effGetVendorVersion, 0, 0, nullptr, 0) == 3001, "version 3001");
     {
         int bad = 0, i = 0;
         std::ifstream f("vst/params.lock");
         std::string line;
         while (std::getline(f, line)) if (!line.empty() && line[0] != '#' && line != g_pspecs[i++].key) bad++;
-        CHECK(i == 176 && bad == 0, "order = vst/params.lock (%d keys, %d differ)", i, bad);
+        CHECK(i == 177 && bad == 0, "order = vst/params.lock (%d keys, %d differ)", i, bad);
         char pn[64] = {0};
         a->dispatcher(a, effGetParamName, PMF, 0, pn, 0);
         CHECK(PMF == 0 && PRE == 58 && ISTAT == 63, "param 0 is PM Filt Env (\"%s\"), preset 58, import_status 63", pn);

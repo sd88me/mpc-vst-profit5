@@ -60,7 +60,7 @@
 #endif
 #define P5_FOURCC(...) MPC_FOURCC(__VA_ARGS__)   // expands P5_UID before MPC_FOURCC counts its arguments
 #ifndef P5_VERSION
-#define P5_VERSION 3000
+#define P5_VERSION 3001
 #endif
 
 namespace {

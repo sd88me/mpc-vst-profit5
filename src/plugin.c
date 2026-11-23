@@ -46,6 +46,7 @@ typedef struct {
     uint32_t rnd;
     unsigned display_rev;
     unsigned char sustain, deferred[128];
+    float wheel_cc, wheel_knob;    /* the mod wheel: MIDI CC1 and the MOD WHEEL control; the engine takes the larger */
     float buf[BLOCK];
 } p5_plugin_t;
 
@@ -259,7 +260,7 @@ static void p5_midi(void *h, const uint8_t *m, int len) {
     case 0xE0: p5_bend(&s->e, ((d1 | (d2 << 7)) - 8192) / 8192.0f); break;
     case 0xC0: load_slot(s, d1); break;
     case 0xB0:
-        if (d1 == 1) p5_wheel(&s->e, d2 / 127.0f);
+        if (d1 == 1) { s->wheel_cc = d2 / 127.0f; p5_wheel(&s->e, s->wheel_cc > s->wheel_knob ? s->wheel_cc : s->wheel_knob); }
         else if (d1 == 64) {
             s->sustain = d2 >= 64;
             if (!s->sustain) for (int n = 0; n < 128; n++) if (s->deferred[n]) { s->deferred[n] = 0; p5_note_off(&s->e, n); }
@@ -271,6 +272,7 @@ static void p5_midi(void *h, const uint8_t *m, int len) {
 static void p5_set_param(void *h, const char *k, const char *val) {
     p5_plugin_t *s = (p5_plugin_t *)h;
     if (!strcmp(k, "preset")) { load_slot(s, atoi(val)); return; }
+    if (!strcmp(k, "mod_wheel")) { s->wheel_knob = (float)atof(val); p5_wheel(&s->e, s->wheel_cc > s->wheel_knob ? s->wheel_cc : s->wheel_knob); return; }
     /* BANKS page (src/Profit5Plugin.cpp: momentary keys fire "1"; tiles light from "<key>_on") */
     if (!strcmp(k, "browse_bank_index")) { int x = atoi(val); if (x >= 0 && x < s->nbanks && x != s->browse_bank) { s->browse_bank = x; s->browse_page = 0; s->display_rev++; } return; }
     if (!strcmp(k, "next_browse_bank") || !strcmp(k, "prev_browse_bank")) {
@@ -363,6 +365,7 @@ static int p5_get_param(void *h, const char *k, char *b, int n) {
     p5_plugin_t *s = (p5_plugin_t *)h;
     if (!strcmp(k, "display_rev")) return snprintf(b, (size_t)n, "%u", s->display_rev) + 1;
     if (!strcmp(k, "preset")) return snprintf(b, (size_t)n, "%d", s->preset) + 1;
+    if (!strcmp(k, "mod_wheel")) return snprintf(b, (size_t)n, "%.4g", s->wheel_knob) + 1;
     if (!strcmp(k, "user")) return snprintf(b, (size_t)n, "%d", s->preset >= nfactory() && s->preset - nfactory() < s->nuser ? s->preset - nfactory() + 1 : 0) + 1;
     if (!strncmp(k, "preset:", 7)) return slot_name(s, atoi(k + 7), b, n);
     if (!strcmp(k, "program_name")) return s->off_slot ? snprintf(b, (size_t)n, "%s", s->loaded_name) + 1 : slot_name(s, s->preset, b, n);
