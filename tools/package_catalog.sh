@@ -26,7 +26,7 @@ PY
   cp "$SRC/VST/profit5-$so.so" "$st/profit_5.so"
   printf '<PLUGIN name="Profit-5" descriptiveName="Profit-5" format="VST" category="Synth" manufacturer="sd88me" version="%s" file="profit_5.so" uid="50667435" isInstrument="1" fileTime="0" infoUpdateTime="0" numInputs="0" numOutputs="2" isShell="0"/>\n' "$VER" > "$st/entry.xml"
   python3 "$MPC_VST/tools/release.py" --so "$st/profit_5.so" --skin "$st/$DIR" --entry "$st/entry.xml" --version "$VER" \
-    --user-data banks --user-data profit5-favourites.dat \
+    --user-data banks --user-data profit5-favourites.dat --user-files "$here/userfiles.json" \
     --repo sd88me/mpc-vst-profit5 --license MIT --id profit-5 \
     --about "Five-voice analog polysynth modelled on an early SSM-chip Prophet-5, circuit-modelled from its schematics: Rev 2 / Rev 4 voicing, 38 factory programs, Repro-5 .h2p and Rev 4 .syx import, a BANKS page for every program, named favourites; native MPC screen and Q-Links." \
     -o "$st/dist"
