@@ -41,6 +41,18 @@ free slots named `U.. Init`, then your favourites. The PRESET menu, the step key
 200-program factory bank fills the 90 slots with its first 90). The Programmer page says how many were found. Loose files are only read in the banks folder
 itself (no sub-folders), a zip may contain folders. The patches are yours: none ships with the plugin.
 
+### Every program, in folders (MPC preset files)
+The program list holds 90 imports. To reach every program of every bank, make MPC preset files: one folder per bank, which the MPC's
+preset browser shows as a layer (for example *Factory 1978*, then the bank's programs):
+
+```
+python3 tools/make_xpl.py --out OUT [--beta] [--template SAVED.xpl] BANK.syx ...
+```
+
+Copy `OUT/sd88me - VST - Profit-5/` into `Plugin Presets/Instruments/` in your MPC documents (`/nvme/MPC Documents` on an MPC Live III).
+`--template` takes a preset you saved from the plugin on that device, so the files match its install exactly (recommended). It needs the
+plugin builder SDK and a C/C++ compiler. The preset files are made from your banks for your own device; keep them there.
+
 What carries over: oscillator pitch and shapes, pulse widths, sync, mix, the filter (cutoff, resonance, key tracking as off / half / full),
 both envelopes, glide, Poly-Mod, voice detune (as Vintage), the LFO rate and shapes, and the "global mod" (wheel-mod source mix, destinations,
 and the lower limit as INIT AMT), and the filter tweak (it chooses Rev 2 or Rev 4, with the velocity depths in Rev 4).
