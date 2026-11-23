@@ -105,10 +105,13 @@ static void env_coefs(p5_engine_t *e) {
         ma_env_set(&e->ak, ATKC(pot(e, P5P_A_A)), DECC(pot(e, P5P_A_D)), pot(e, P5P_A_S), rel ? DECC(pot(e, P5P_A_R)) : roff, 1.3f, e->fsi);
         return;
     }
-    ma_env_set(&e->fk, ATK(pot(e, P5P_F_A)) * r->atk_scale, DEC(pot(e, P5P_F_D)) * r->dec_scale, pot(e, P5P_F_S),
-               rel ? DEC(pot(e, P5P_F_R)) * r->dec_scale : 0.005f, 1.3f, e->fsi);
-    ma_env_set(&e->ak, ATK(pot(e, P5P_A_A)) * r->atk_scale, DEC(pot(e, P5P_A_D)) * r->dec_scale, pot(e, P5P_A_S),
-               rel ? DEC(pot(e, P5P_A_R)) * r->dec_scale : 0.005f, 1.3f, e->fsi);
+    /* model 1, Rev 4 (ESTIMATE, 2026-11-24): decay and release x0.25 instead of x0.7. A black-box render of GForce's Prophet 5 showed
+     * decay/release 0.27..0.43 of the 2.0.0 law's times at knobs 5, 8 and 10 (4.1 s against 15.1 s at 8; 19.7 against 51 at 10), attack within 25% */
+    const float ds = circ4(e) ? 0.25f : r->dec_scale;
+    ma_env_set(&e->fk, ATK(pot(e, P5P_F_A)) * r->atk_scale, DEC(pot(e, P5P_F_D)) * ds, pot(e, P5P_F_S),
+               rel ? DEC(pot(e, P5P_F_R)) * ds : 0.005f, 1.3f, e->fsi);
+    ma_env_set(&e->ak, ATK(pot(e, P5P_A_A)) * r->atk_scale, DEC(pot(e, P5P_A_D)) * ds, pot(e, P5P_A_S),
+               rel ? DEC(pot(e, P5P_A_R)) * ds : 0.005f, 1.3f, e->fsi);
 }
 
 static void set_rate(p5_engine_t *e) {
