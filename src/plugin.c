@@ -1,7 +1,7 @@
 /* Profit-5 for mpc-vst-plugins' VST2 wrapper (wrapper/engine.h): 44100 Hz, interleaved int16 stereo, string parameters.
  *
  * Keys and ranges are src/plugin_keys.h (tools/gen_params.py); each maps linearly onto the engine's 0..1. "preset" loads a
- * program slot: 0..37 are the factory sheets, then one slot per Repro-5 .h2p patch found in <plugin dir>/banks (src/p5_import.c;
+ * program slot: 0..37 are the factory sheets, then one slot per Repro-5 .h2p patch or Prophet-5 Rev 4 .syx program found in <plugin dir>/banks (src/p5_import.c;
  * scanned once at create), the rest "Init". MPC's PRESET menu lists all P5_SLOTS through vst.json "programs" (names come from
  * "preset:<n>"). "user" is the 0.2.0 import knob, kept so old saves load. "state" saves and restores every value, and
  * "display_rev" tells the wrapper (HAS_DISPLAY_REV) when the engine changed values by itself: a program load or MIDI.
@@ -26,6 +26,7 @@
 #define MAX_USER 90                /* imported patches: the first MAX_USER found in <plugin dir>/banks, sorted by file name (P5_SLOTS - 38 factory) */
 #define MAX_H2P (256u << 10)       /* one patch file; a bank zip may be up to MAX_ZIP */
 #define MAX_ZIP (32u << 20)
+#define MAX_SYX (1u << 20)         /* a .syx bank: 200 programs are 32 KB */
 
 typedef struct {
     p5_engine_t e;
@@ -71,6 +72,18 @@ static int zip_entry(const char *name, const uint8_t *data, size_t len, void *us
     add_user((p5_plugin_t *)user, base_noext(name, b, sizeof b), data, len);
     return ((p5_plugin_t *)user)->nuser >= MAX_USER;
 }
+/* a Prophet-5 Rev 4 .syx: every program in it, in file order, named as in the dump */
+static int syx_patch(const p5_import_t *patch, void *user) {
+    p5_plugin_t *s = (p5_plugin_t *)user;
+    if (s->nuser >= MAX_USER) return 1;
+    s->imp[s->nuser++] = *patch;
+    return s->nuser >= MAX_USER;
+}
+static int zip_syx(const char *name, const uint8_t *data, size_t len, void *user) {
+    (void)name;
+    p5_import_syx(data, len, syx_patch, user);
+    return ((p5_plugin_t *)user)->nuser >= MAX_USER;
+}
 static int has_ext(const char *f, const char *ext) {
     size_t a = strlen(f), b = strlen(ext);
     return a > b && !strcasecmp(f + a - b, ext);
@@ -93,7 +106,7 @@ static void scan_banks(p5_plugin_t *s, const char *dir) {
     char **names = NULL;
     int n = 0, cap = 0;
     for (struct dirent *e; (e = readdir(d));) {
-        if (e->d_name[0] == '.' || !(has_ext(e->d_name, ".h2p") || has_ext(e->d_name, ".zip"))) continue;
+        if (e->d_name[0] == '.' || !(has_ext(e->d_name, ".h2p") || has_ext(e->d_name, ".syx") || has_ext(e->d_name, ".zip"))) continue;
         if (n == cap) {
             char **t = (char **)realloc(names, (size_t)(cap = cap ? cap * 2 : 64) * sizeof *names);
             if (!t) break;
@@ -110,9 +123,13 @@ static void scan_banks(p5_plugin_t *s, const char *dir) {
         if (has_ext(names[i], ".h2p")) {
             uint8_t *data = slurp(path, MAX_H2P, &len);
             if (data) { char b[28]; add_user(s, base_noext(names[i], b, sizeof b), data, len); free(data); }
+        } else if (has_ext(names[i], ".syx")) {
+            uint8_t *data = slurp(path, MAX_SYX, &len);
+            if (data) { p5_import_syx(data, len, syx_patch, s); free(data); }
         } else {
-            uint8_t *data = slurp(path, MAX_ZIP, &len), *scratch = data ? (uint8_t *)malloc(MAX_H2P) : NULL;
+            uint8_t *data = slurp(path, MAX_ZIP, &len), *scratch = data ? (uint8_t *)malloc(MAX_SYX) : NULL;
             if (scratch) p5_zip_walk(data, len, ".h2p", scratch, MAX_H2P, zip_entry, s);
+            if (scratch && s->nuser < MAX_USER) p5_zip_walk(data, len, ".syx", scratch, MAX_SYX, zip_syx, s);
             free(scratch);
             free(data);
         }

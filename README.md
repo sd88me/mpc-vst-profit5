@@ -31,12 +31,14 @@ laws are still measured guesses (see "What is measured, and what isn't"): expect
 ROM image, manual, schematic, patch-sheet scan or photograph: everything in it is code and generated art. The patch names are the factory
 program names as published in the patch-sheet booklet; their knob settings were read by hand.*
 
-## Importing Repro-5 patches
-Put u-he Repro-5 `.h2p` patch files, or `.zip` files of them, in the `banks` folder inside the plugin's folder (the installer keeps it when you
+## Importing Repro-5 patches and Prophet-5 SysEx banks
+Put u-he Repro-5 `.h2p` patch files, Prophet-5 / Prophet-10 (Rev 4) SysEx program banks (`.syx`), or `.zip` files of either, in the `banks`
+folder inside the plugin's folder (the installer keeps it when you
 upgrade). The plugin reads them once when it loads, so **reload the plugin after adding files**. They are sorted
 by file name and join the program list: slots 1-38 are the factory sheets, then `U01`-`U90` are the imported patches (named after the file), then
 free slots named `U.. Init`, then your favourites. The PRESET menu, the step keys and data wheel on the Programmer page, a Q-Link and MIDI program change
-(0-127) all pick from the same list. The Programmer page says how many were found. Loose files are only read in the banks folder
+(0-127) all pick from the same list. A `.syx` bank adds every program in it, in file order, under the names stored in the dump (a
+200-program factory bank fills the 90 slots with its first 90). The Programmer page says how many were found. Loose files are only read in the banks folder
 itself (no sub-folders), a zip may contain folders. The patches are yours: none ships with the plugin.
 
 What carries over: oscillator pitch and shapes, pulse widths, sync, mix, the filter (cutoff, resonance, key tracking as off / half / full),
@@ -128,7 +130,7 @@ Honest status, offline on x86 (2026-10-21):
 - **Still guessed:** the start of the envelope and LFO ranges, the cutoff span, resonance law, Poly-Mod and Wheel-Mod depths, and a few summing-amp inputs the
   scan doesn't show. Rev 4 is modelled from public descriptions, not from a unit or its schematics.
 - **Known quiet program:** 5-5 Helicopter barely sounds in a short test (its amplifier attack is about 14 s under the datasheet law). To check against a recording.
-- **Not done:** a cassette-dump and `.syx` importer, a second output. A recording of a real unit would let me fit most of the guessed laws.
+- **Not done:** a cassette-dump importer (original Rev 1-3 tapes), Rev 3.3 SysEx, a second output. A recording of a real unit would let me fit most of the guessed laws.
 
 What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written up, with the evidence, in [`docs/ENGINE.md`](docs/ENGINE.md), [`docs/FIRMWARE.md`](docs/FIRMWARE.md) and
 [`docs/PRESETS.md`](docs/PRESETS.md).
@@ -157,6 +159,7 @@ gcc -O2 -Wall -Wextra -Werror -std=c11 -fsanitize=address,undefined test/test_en
 gcc -O2 -Wall -Wextra -Werror -fsanitize=address,undefined test/test_kernels.c -lm && ./a.out
 gcc -O1 -Wall -Wextra -Werror -std=c11 -fsanitize=address,undefined test/test_import.c src/p5_import.c -lm && ./a.out                    # .h2p import
 gcc -O1 -std=gnu11 -fsanitize=address,undefined -Isrc -Ianalog -I../mpc-vst-plugins/wrapper test/test_plugin_import.c src/engine.c src/p5_import.c -lm && ./a.out
+gcc -O1 -std=gnu11 -fsanitize=address,undefined -Isrc -Ianalog -I../mpc-vst-plugins/wrapper test/test_syx.c src/engine.c src/p5_import.c -lm && ./a.out   # .syx import
 python3 tools/spice_check.py                                          # needs ngspice
 ../mpc-vst-plugins/tools/test_port.sh vst/vst.json                    # the 0.x build's offline host test
 ```
