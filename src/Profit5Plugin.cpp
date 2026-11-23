@@ -448,12 +448,16 @@ private:
             {
                 // compared with the host's own value, not only the last one sent: a tile the host left lit (its own press, a missed
                 // update) is put out within ~100 ms, so only the current program's tile stays lit
-                if (held_[i].load()) continue;
                 char k2[64];
                 std::snprintf(k2, sizeof k2, "%s_on", s.key);
                 const float on = engineGet(k2, buf, sizeof buf) && std::atoi(buf) ? 1.0f : 0.0f;
                 const bool shown = getNormalised(i) > 0.5f;
-                if (moved || on != told_[i] || (on > 0.5f) != shown) { pushValue(i, on); if (!moved) ++changed; }
+                if (moved || on != told_[i] || (on > 0.5f) != shown)
+                {
+                    pushValue(i, on);
+                    held_[i].store(false);   // the host now shows our value: the next press is a new tap even if no release came
+                    if (!moved) ++changed;
+                }
                 continue;
             }
             if (!(moved || full)) continue;
