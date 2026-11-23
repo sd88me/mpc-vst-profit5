@@ -1,6 +1,6 @@
 // Profit-5 for MPC / Force: the native front end (framework/mpc_plugin.h) around the unchanged Profit-5 engine
 // (src/engine.c + src/p5_import.c + src/plugin.c's string-key mpc_engine(), via engine_unit.cpp: five voices, Rev 2 / Rev 4, the
-// 38 factory programs, Repro-5 .h2p patches imported from <plugin folder>/banks).
+// 38 factory programs, Repro-5 .h2p patches and Prophet-5 Rev 4 .syx banks imported from <plugin folder>/banks).
 //
 // Signal flow: host MIDI (sample accurate) -> engine midi -> engine render (int16 stereo, up to 128 frames) -> float outputs.
 //
@@ -127,7 +127,7 @@ public:
         pthread_mutex_init(&lock_, &ma);
         pthread_mutexattr_destroy(&ma);
 
-        // The engine scans the folder it is given for .h2p / .zip patches. 1.x gave it <plugin folder>/banks (MODULE_SUBDIR "banks"):
+        // The engine scans the folder it is given for .h2p / .syx / .zip patches. 1.x gave it <plugin folder>/banks (MODULE_SUBDIR "banks"):
         // keep that, so imported patches and the projects that picked them stay where they were.
         // (Not mpc::contentPath(): a function-local static std::string segfaults at dlclose.)
         const std::string folder = mpc::detail::computePluginFolder();
