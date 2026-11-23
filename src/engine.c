@@ -18,16 +18,16 @@
 /* model 1: H (volts) to the engine's level: 0.45 (2.0.0's open filter, one saw at mix 10) / (20 x 0.272 V) */
 #define VCF_OUT (0.45f / (20 * 0.02906f * 9.35f))
 /* model 1, Rev 4 (3320) filter trims (Rev 3 manual 4-20: cutoff CV 2.000 V, A3 rings at 440 Hz and A4 at 880 Hz); tools/service_trim.py */
-#define CUT4_TRIM 0.07067f
-#define CUT4_KV 0.99833f
-/* model 1, Rev 4 (ESTIMATES, checked against a black-box render of GForce's Prophet 5, filter "3", 2026-11-23): the RES CV's resistor into the
+#define CUT4_TRIM 0.05953f
+#define CUT4_KV 0.99835f
+/* model 1, Rev 4 (ESTIMATES, set halfway between the 3.0 beta and a black-box render of GForce's Prophet 5, filter "3", 2026-11-23): the RES CV's resistor into the
  * Q VCA (the Rev 3 schematic's 200k put self-oscillation at RES 6; GForce has it at 6.5-7) and the Q compensation's exponent (0.68 restored
  * most of the bass; GForce loses about 5 dB at RES 5 with its Q comp on or off) */
 #ifndef RES4_R
-#define RES4_R 225e3f
+#define RES4_R 212e3f
 #endif
 #ifndef QCOMP4_EXP
-#define QCOMP4_EXP 0.30f
+#define QCOMP4_EXP 0.48f
 #endif
 /* model 1, Rev 4: one osc at 10 puts 0.25 x I_ref (63 uA) into stage 1 (ASSUMED: the Rev 3 CA3280 and Rev 4 SSI2164 mixer gains are not
  * read); x 90.9k gives the kernel's volts. Output: U475 to the engine's level, one saw at mix 10 through an open filter as loud as 2.0.0 */
