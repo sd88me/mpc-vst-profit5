@@ -10,7 +10,7 @@ smooth controls, velocity and aftertouch).
 
 | | |
 |---|---|
-| ![Filter and amplifier](docs/img/screenshot-filter.png) | ![Programmer: programs, imports and favourites](docs/img/screenshot-program.png) |
+| ![Filter and amplifier](docs/img/screenshot-filter.png) | ![Banks: every bank and program](docs/img/skin-banks.png) |
 
 ## New in 3.0
 - **Circuit-modelled voice.** The Rev 2 voice was rebuilt from its schematics and service manual, following the
@@ -20,10 +20,11 @@ smooth controls, velocity and aftertouch).
   datasheet, trimmed to the reissue's procedure. Where no data exists, the value is an estimate and is marked as one in
   [`docs/improvements.md`](docs/improvements.md).
 - **Old projects keep their sound.** A project saved with 2.0 or earlier plays with the 2.0 engine. New instances and the programs use the circuit model.
-- **BANKS page:** every program of every bank, with no 90-program limit (see below). It also has RANDOM, +FAV and -FAV.
+- **BANKS page:** every program of every bank, with no 90-program limit (see below). It also has RANDOM, +FAV and -FAV. It replaces the
+  Programmer page; Voices and Quality moved to Filter Amp, next to Unison and Rev.
 - **Prophet-5 / Prophet-10 Rev 4 SysEx banks** (`.syx`, loose or in zips) import alongside Repro-5 patches.
 - **Quality defaults to High on Gen2** (MPC Live III and other 64-bit MPCs) and to **Eco on Gen1** (Force and 32-bit MPCs), where High costs a
-  lot more CPU. Change it on the Programmer page; it's saved with the project.
+  lot more CPU. Change it on the Filter Amp page; it's saved with the project.
 - CPU at High: about 11 % on a Live III. On a Force, about 36 % at High and 18 % at Eco (device benches, 2026-11).
 
 ![The BANKS page](docs/img/skin-banks.png)
@@ -52,16 +53,16 @@ Put u-he Repro-5 `.h2p` patch files, Prophet-5 / Prophet-10 (Rev 4) SysEx progra
 folder inside the plugin's folder (the installer keeps it when you
 upgrade). The plugin reads them once when it loads, so **reload the plugin after adding files**. They are sorted
 by file name and join the program list: slots 1-38 are the factory sheets, then `U01`-`U90` are the imported patches (named after the file), then
-free slots named `U.. Init`, then your favourites. The PRESET menu, the step keys and data wheel on the Programmer page, a Q-Link and MIDI program change
+free slots named `U.. Init`, then your favourites. The PRESET menu, the BANKS page, a Q-Link and MIDI program change
 (0-127) all pick from the same list. A `.syx` bank adds every program in it, in file order, under the names stored in the dump (a
-200-program factory bank fills the 90 slots with its first 90). The Programmer page says how many were found. Loose files are only read in the banks folder
+200-program factory bank fills the 90 slots with its first 90). Loose files are only read in the banks folder
 itself (no sub-folders), a zip may contain folders. The patches are yours: none ships with the plugin.
 
 ### The BANKS page
 A fourth page, BANKS, lists every bank and every program in it, with no limit: **Factory 1978**, then one bank per file in the `banks`
 folder (a `.syx` of more than 40 programs is split into banks of 40, loose `.h2p` files share a **Repro-5** bank). Tap a bank to browse it,
 tap a program to load it. **BANK** and **PROGRAM** at the top step with their arrows, the data wheel or a Q-Link; the PROGRAMS header has page
-keys. **RANDOM** loads a random imported program; **+FAV** (with the naming keyboard) and **-FAV** are the same favourites as on PROGRAMMER.
+keys. **RANDOM** loads a random imported program; **+FAV** (with the naming keyboard) and **-FAV** store and delete favourites.
 Programs beyond the 90 PRESET slots play from BANKS and keep their name in your project.
 
 ### Every program, in folders (MPC preset files)
@@ -106,7 +107,7 @@ Then add **Profit-5** to a track from the plugin browser. Upgrading keeps your `
 - **Filter and amplifier:** cutoff, resonance, envelope amount, keyboard tracking, and a four-stage ADSR for each.
 - **Glide** and **master tune**, pitch bend, mod wheel, sustain pedal and program change.
 - **38 factory programs** (banks 1-4 and 5-1 to 5-6 of the original set), in MPC's PRESET menu and on the Program knob.
-- **Four screen pages** (three panel pages plus BANKS) with real-panel layout, printed 0-10 scales and 128-step knob pictures, six Q-Link sub-tabs, and favourites in the PRESET menu.
+- **Three screen pages** (Oscillators, Filter Amp, Banks) with real-panel layout, printed 0-10 scales and 128-step knob pictures, six Q-Link sub-tabs, and favourites in the PRESET menu.
 
 ### Rev 2 and Rev 4
 
@@ -179,9 +180,8 @@ What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written u
 | Tab | Contents |
 |---|---|
 | **Oscillators** | Poly-Mod (filter envelope, osc 2, three destinations), LFO (initial amount, frequency, three shapes), Wheel-Mod (source mix, five destinations), oscillator 1 and 2, mixer |
-| **Filter Amp** | Glide and unison, filter (cutoff, resonance, envelope amount, keyboard tracking, half/full, ADSR), amplifier ADSR and release, vintage, master tune, volume, velocity and aftertouch depths |
-| **Programmer** | Program name with step keys and the data wheel, imported-patch count, +FAV / -FAV with the naming keyboard, voices, unison, quality, rev |
-| **Banks** | Bank and program steppers (data wheel, Q-Links), bank list, programs 45 to a page, RANDOM, +FAV / -FAV |
+| **Filter Amp** | Glide, voices, unison, quality, filter (cutoff, resonance, envelope amount, keyboard tracking, half/full, ADSR), amplifier ADSR and release, vintage, master tune, volume, velocity and aftertouch depths |
+| **Banks** | Bank and program steppers (data wheel, Q-Links), bank list, programs 24 to a page, RANDOM, +FAV / -FAV with the naming keyboard |
 
 MIDI: notes with velocity, polyphonic and channel aftertouch, pitch bend (two semitones), CC 1 mod wheel, CC 64 sustain, CC 120 / 123 all off, program change.
 

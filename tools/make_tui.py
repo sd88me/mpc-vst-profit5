@@ -240,9 +240,9 @@ QLINKS = {
         ("MOD SWITCHES", [["b_lo", "b_kbd"], ["wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b"], ["wm_filter"]]),
     ],
     "FILTER AMP": [
-        ("FILTER AMP", [["glide", "unison"], ["cutoff", "reso", "env_amt"], ["f_attack", "f_decay", "f_sustain", "f_release"],
+        ("FILTER AMP", [["glide", "voices", "unison"], ["cutoff", "reso", "env_amt"], ["f_attack", "f_decay", "f_sustain", "f_release"],
                         ["a_attack", "a_decay", "a_sustain", "a_release"]]),
-        ("TOUCH SWITCHES", [["rev", "kbd_half", "f_kbd"], ["vintage", "tune", "volume"], ["vel_filter", "vel_amp", "at_filter", "at_lfo"], ["release"]]),
+        ("TOUCH SWITCHES", [["rev", "quality", "kbd_half", "f_kbd"], ["vintage", "tune", "volume"], ["vel_filter", "vel_amp", "at_filter", "at_lfo"], ["release"]]),
     ],
     "PROGRAMMER": [
         ("PROGRAMMER", [["preset"], ["voices", "unison", "quality", "rev"]]),
@@ -251,7 +251,7 @@ QLINKS = {
         ("BANKS", [["browse_bank_index"], ["bank_prog"]]),
     ],
 }
-TAB_ORDER = ["OSCILLATORS", "FILTER AMP", "PROGRAMMER", "BANKS"]   # BANKS last: the first three keep their keys and Q-Links
+TAB_ORDER = ["OSCILLATORS", "FILTER AMP", "BANKS"]   # 3.0: BANKS replaces PROGRAMMER (its VOICES and QUALITY are on FILTER AMP)
 
 
 class Page:
@@ -314,8 +314,8 @@ def build_page(name, fn, spec):
 
 
 # ---- BANKS: the bank and program lists (src/plugin.c), like Profit-08's page in this panel's look ------------------------------
-BANK_TILES = dict(n=11, x=36, y=96, w=282, h=40, pitch=47)
-PROG_TILES = dict(n=45, rows=15, x=354, y=122, w=290, h=28, pitch_x=300, pitch_y=32)
+BANK_TILES = dict(n=7, x=36, y=94, w=282, h=64, pitch=74)
+PROG_TILES = dict(n=24, rows=8, x=354, y=134, w=290, h=54, pitch_x=300, pitch_y=60)
 SAMPLE_BANKS = ["Factory 1978"] + ["P5 Factory Programs FACT %d" % i for i in range(1, 6)] + ["Repro-5"]
 SAMPLE_PROGS = ["1-1 Brass", "1-2 Low Strings", "1-3 Muted Clav", "1-4 Percussive Electric Piano", "1-5 Flutes", "1-6 Harpsichord", "1-7 Sync I",
                 "1-8 Percussive Organ", "2-1 Unison Glide With Resonance", "2-2 Harmonium", "2-3 Organ With Resonance", "2-4 Toy Piano", "2-5 Trumpet/Flute",
@@ -404,23 +404,23 @@ def build_banks(fn):
     for k, cap, x, w in (("random_patch", "RANDOM", 962, 104), ("fav_add", "+FAV", 1076, 86), ("fav_del", "-FAV", 1170, 86)):
         p.kids.append(button(k, save(text_key(w, 44, cap, True), "bk_%s_on.png" % k), save(text_key(w, 44, cap, False), "bk_%s_off.png" % k), B(x, 15, w, 44)))
     # page keys in the PROGRAMS header, right
-    for k, cap, x in (("patch_page_prev", "<", 1070), ("patch_page_next", ">", 1210)):
-        p.kids.append(button(k, save(text_key(40, 26, cap, True), "pg_%s_on.png" % k), save(text_key(40, 26, cap, False), "pg_%s_off.png" % k), B(x, 88, 40, 26)))
-    p.kids.append(label(B(1114, 88, 92, 26), P("patch_page_text"), h=15.0, colour="ffc8c8c0", style="SemiBold"))
+    for k, cap, x in (("patch_page_prev", "<", 1004), ("patch_page_next", ">", 1176)):
+        p.kids.append(button(k, save(text_key(68, 38, cap, True), "pg_%s_on.png" % k), save(text_key(68, 38, cap, False), "pg_%s_off.png" % k), B(x, 88, 68, 38)))
+    p.kids.append(label(B(1074, 88, 100, 38), P("patch_page_text"), h=19.0, colour="ffc8c8c0", style="SemiBold"))
     p.sample["patch_page_text"] = "PAGE 1/1"
     # tiles: a live name, and over it a transparent button lit while it is the current bank / program
     bt, pt = BANK_TILES, PROG_TILES
     on_b, off_b = save(tile_img(bt["w"], bt["h"], True), "tile_bank_on.png"), save(tile_img(bt["w"], bt["h"], False), "tile_bank_off.png")
     for i in range(bt["n"]):
         y, k = bt["y"] + i * bt["pitch"], "bank_slot_%d" % (i + 1)
-        p.kids.append(label(B(bt["x"] + 12, y, bt["w"] - 20, bt["h"]), P(k), h=18.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+        p.kids.append(label(B(bt["x"] + 12, y, bt["w"] - 20, bt["h"]), P(k), h=22.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
         p.kids.append(button(k, on_b, off_b, B(bt["x"], y, bt["w"] + 1, bt["h"] + 1)))
         p.sample[k] = SAMPLE_BANKS[i] if i < len(SAMPLE_BANKS) else ""
     on_p, off_p = save(tile_img(pt["w"], pt["h"], True), "tile_prog_on.png"), save(tile_img(pt["w"], pt["h"], False), "tile_prog_off.png")
     for i in range(pt["n"]):
         c, r = divmod(i, pt["rows"])
         x, y, k = pt["x"] + c * pt["pitch_x"], pt["y"] + r * pt["pitch_y"], "patch_slot_%d" % (i + 1)
-        p.kids.append(label(B(x + 10, y, pt["w"] - 16, pt["h"]), P(k), h=16.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+        p.kids.append(label(B(x + 10, y, pt["w"] - 16, pt["h"]), P(k), h=19.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
         p.kids.append(button(k, on_p, off_p, B(x, y, pt["w"] + 1, pt["h"] + 1)))
         p.sample[k] = SAMPLE_PROGS[i] if i < len(SAMPLE_PROGS) else ""
     return p
