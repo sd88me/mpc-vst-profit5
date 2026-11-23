@@ -444,15 +444,20 @@ private:
             const PSpec& s = g_pspecs[i];
             if (s.flags & kLocal) continue;
             const bool moved = hostMoved_[i].exchange(false);
-            if (!(moved || full)) continue;
-            if (s.flags & kTile)   // lit = the engine's "<key>_on"
+            if ((s.flags & kTile) && (moved || full || tick_ % 10 == 0))   // lit = the engine's "<key>_on"
             {
+                // compared with the host's own value, not only the last one sent: a tile the host left lit (its own press, a missed
+                // update) is put out within ~100 ms, so only the current program's tile stays lit
+                if (held_[i].load()) continue;
                 char k2[64];
                 std::snprintf(k2, sizeof k2, "%s_on", s.key);
                 const float on = engineGet(k2, buf, sizeof buf) && std::atoi(buf) ? 1.0f : 0.0f;
-                if (moved || on != told_[i]) { pushValue(i, on); if (!moved) ++changed; }
+                const bool shown = getNormalised(i) > 0.5f;
+                if (moved || on != told_[i] || (on > 0.5f) != shown) { pushValue(i, on); if (!moved) ++changed; }
                 continue;
             }
+            if (!(moved || full)) continue;
+            if (s.flags & kTile) continue;
             if (!(s.flags & kPolled)) continue;
             if (i == 0 && pend0At_.load()) { if (moved) hostMoved_[0].store(true); continue; }
             // while the host is still moving it, don't send the engine's value back under the finger; read it back once it has rested

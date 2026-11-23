@@ -315,8 +315,8 @@ def build_page(name, fn, spec):
 
 # ---- BANKS: the bank and program lists (src/plugin.c), like Profit-08's page in this panel's look ------------------------------
 BANK_TILES = dict(n=8, x=36, y=94, w=282, h=56, pitch=64)
-PROG_TILES = dict(n=36, rows=12, x=354, y=134, w=290, h=34, pitch_x=300, pitch_y=39)
-SAMPLE_BANKS = ["Factory 1978"] + ["P5 Factory Programs FACT %d" % i for i in range(1, 6)] + ["Repro-5"]
+PROG_TILES = dict(n=30, rows=10, x=354, y=134, w=290, h=42, pitch_x=300, pitch_y=47)
+SAMPLE_BANKS = ["Factory 1978", "INHALT-Stack-and-Split-Programs", "P5 Factory Programs FACTORY v1.03", "P5 Factory Programs USER v1.03", "Repro-5"]
 SAMPLE_PROGS = ["1-1 Brass", "1-2 Low Strings", "1-3 Muted Clav", "1-4 Percussive Electric Piano", "1-5 Flutes", "1-6 Harpsichord", "1-7 Sync I",
                 "1-8 Percussive Organ", "2-1 Unison Glide With Resonance", "2-2 Harmonium", "2-3 Organ With Resonance", "2-4 Toy Piano", "2-5 Trumpet/Flute",
                 "2-6 Filter Mod", "2-7 Reed Organ", "2-8 Brass In Fifths", "3-1 Pipe Organ Flutes", "3-2 Sync II", "3-3 Electric Piano", "3-4 High Strings",
@@ -392,7 +392,7 @@ def button(k, on, off, b, ind=None):
 def build_banks(fn):
     p = Page("BANKS", fn)
     # steppers: BANK / PROGRAM, a named whole number between its arrows (the data wheel and the Q-Link step it)
-    for key, prev, nxt, x0, x1, sample in (("browse_bank_index", "prev_browse_bank", "next_browse_bank", 24, 524, "P5 Factory Programs FACT 1"),
+    for key, prev, nxt, x0, x1, sample in (("browse_bank_index", "prev_browse_bank", "next_browse_bank", 24, 524, "P5 Factory Programs FACTORY v1.03"),
                                            ("bank_prog", "bank_prog_prev", "bank_prog_next", 540, 948, "001 It's a Prophet 5")):
         aw, h, y = 56, 50, 12
         p.kids.append(button(prev, save(arrow(aw, h, -1, True), "b_prev_on.png"), save(arrow(aw, h, -1, False), "b_prev_off.png"), B(x0, y, aw, h)))
@@ -420,7 +420,7 @@ def build_banks(fn):
     for i in range(pt["n"]):
         c, r = divmod(i, pt["rows"])
         x, y, k = pt["x"] + c * pt["pitch_x"], pt["y"] + r * pt["pitch_y"], "patch_slot_%d" % (i + 1)
-        p.kids.append(label(B(x + 10, y, pt["w"] - 16, pt["h"]), P(k), h=17.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+        p.kids.append(label(B(x + 10, y, pt["w"] - 16, pt["h"]), P(k), h=19.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
         p.kids.append(button(k, on_p, off_p, B(x, y, pt["w"] + 1, pt["h"] + 1)))
         p.sample[k] = SAMPLE_PROGS[i] if i < len(SAMPLE_PROGS) else ""
     return p

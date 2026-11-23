@@ -25,10 +25,9 @@
 #define P5_SLOTS 128               /* programs in the MPC menu = MIDI program numbers: the factory sheets, then imported patches, then Init */
 #define MAX_USER 90                /* imported patches in the PRESET menu: the first MAX_USER found in <plugin dir>/banks (P5_SLOTS - 38 factory) */
 #define MAX_ALL 2048               /* imported patches in all: every one is on the BANKS page */
-#define MAX_BANKS 256              /* BANKS page: Factory 1978, then one bank per file (a .syx of more than BANK_SPLIT programs is split) */
-#define BANK_SPLIT 40              /* the Rev 4's bank size */
+#define MAX_BANKS 256              /* BANKS page: Factory 1978, then one bank per file */
 #define BANK_SLOTS 8               /* bank tiles in the list (the params run to bank_slot_11; the skin shows 8) */
-#define PROG_SLOTS 36              /* program tiles a page: three columns of 12 (the params run to patch_slot_45; the skin shows 36) */
+#define PROG_SLOTS 30              /* program tiles a page: three columns of 10 (the params run to patch_slot_45; the skin shows 30) */
 #define MAX_H2P (256u << 10)       /* one patch file; a bank zip may be up to MAX_ZIP */
 #define MAX_ZIP (32u << 20)
 #define MAX_SYX (1u << 20)         /* a .syx bank: 200 programs are 32 KB */
@@ -96,26 +95,19 @@ static int zip_syx(const char *name, const uint8_t *data, size_t len, void *user
     p5_import_syx(data, len, syx_patch, user);
     return ((p5_plugin_t *)user)->nuser >= MAX_ALL;
 }
-/* a bank for the patches of one file: added after them, split into banks of BANK_SPLIT when larger; loose .h2p files share one */
+/* a bank for the patches of one file, added after them (BANKS pages through a large one); consecutive loose .h2p files share one */
 static void close_bank(p5_plugin_t *s, const char *file, int first, int loose) {
-    int n = s->nuser - first;
+    const int n = s->nuser - first;
     if (n <= 0) return;
-    if (loose && s->nbanks > 1 && s->banks[s->nbanks - 1].loose && s->banks[s->nbanks - 1].first + s->banks[s->nbanks - 1].count == first) {
-        s->banks[s->nbanks - 1].count += n;
-        return;
-    }
-    char nm[40];
-    snprintf(nm, sizeof nm, "%s", loose ? "Repro-5" : file);
-    for (char *c = nm; *c; c++) if (*c == '_') *c = ' ';
-    const int parts = loose || n <= BANK_SPLIT ? 1 : (n + BANK_SPLIT - 1) / BANK_SPLIT;
-    for (int k = 0; k < parts && s->nbanks < MAX_BANKS; k++) {
-        p5_bank_t *b = &s->banks[s->nbanks++];
-        b->first = first + k * BANK_SPLIT;
-        b->count = parts == 1 ? n : (k == parts - 1 ? n - k * BANK_SPLIT : BANK_SPLIT);
-        b->loose = loose;
-        if (parts == 1) snprintf(b->name, sizeof b->name, "%s", nm);
-        else snprintf(b->name, sizeof b->name, "%.24s %d", nm, (k + 1) % 1000);   /* short enough that the part number shows on a tile */
-    }
+    p5_bank_t *last = &s->banks[s->nbanks - 1];
+    if (loose && s->nbanks > 1 && last->loose && last->first + last->count == first) { last->count += n; return; }
+    if (s->nbanks >= MAX_BANKS) return;
+    p5_bank_t *b = &s->banks[s->nbanks++];
+    snprintf(b->name, sizeof b->name, "%s", loose ? "Repro-5" : file);
+    for (char *c = b->name; *c; c++) if (*c == '_') *c = ' ';
+    b->first = first;
+    b->count = n;
+    b->loose = loose;
 }
 static int has_ext(const char *f, const char *ext) {
     size_t a = strlen(f), b = strlen(ext);

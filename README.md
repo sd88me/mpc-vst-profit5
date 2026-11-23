@@ -60,7 +60,7 @@ itself (no sub-folders), a zip may contain folders. The patches are yours: none 
 
 ### The BANKS page
 A fourth page, BANKS, lists every bank and every program in it, with no limit: **Factory 1978**, then one bank per file in the `banks`
-folder (a `.syx` of more than 40 programs is split into banks of 40, loose `.h2p` files share a **Repro-5** bank). Tap a bank to browse it,
+folder, whatever its size (a 200-program `.syx` is one bank of seven pages; loose `.h2p` files share a **Repro-5** bank). Tap a bank to browse it,
 tap a program to load it. **BANK** and **PROGRAM** at the top step with their arrows, the data wheel or a Q-Link; the PROGRAMS header has page
 keys. **RANDOM** loads a random imported program; **+FAV** (with the naming keyboard) and **-FAV** store and delete favourites.
 Programs beyond the 90 PRESET slots play from BANKS and keep their name in your project.
@@ -181,7 +181,7 @@ What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written u
 |---|---|
 | **Oscillators** | Poly-Mod (filter envelope, osc 2, three destinations), LFO (initial amount, frequency, three shapes), Wheel-Mod (source mix, five destinations), oscillator 1 and 2, mixer |
 | **Filter Amp** | Glide, voices, unison, quality, filter (cutoff, resonance, envelope amount, keyboard tracking, half/full, ADSR), amplifier ADSR and release, vintage, master tune, volume, velocity and aftertouch depths |
-| **Banks** | Bank and program steppers (data wheel, Q-Links), bank list, programs 36 to a page, RANDOM, +FAV / -FAV with the naming keyboard |
+| **Banks** | Bank and program steppers (data wheel, Q-Links), bank list, programs 30 to a page, RANDOM, +FAV / -FAV with the naming keyboard |
 
 MIDI: notes with velocity, polyphonic and channel aftertouch, pitch bend (two semitones), CC 1 mod wheel, CC 64 sustain, CC 120 / 123 all off, program change.
 

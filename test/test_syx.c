@@ -105,17 +105,20 @@ int main(void) {
         assert(f && fwrite(big, 1, bn, f) == bn);
         fclose(f);
         h = E->create(dir);
-        assert(E->get_param(h, "bank_slot_2", b, sizeof b) > 0 && !strcmp(b, "Big Bank 1"));
-        assert(E->get_param(h, "bank_slot_4", b, sizeof b) > 0 && !strcmp(b, "Big Bank 3"));
-        assert(E->get_param(h, "bank_slot_5", b, sizeof b) > 0 && !strcmp(b, ""));
+        assert(E->get_param(h, "bank_slot_2", b, sizeof b) > 0 && !strcmp(b, "Big Bank"));   /* one bank of 100 */
+        assert(E->get_param(h, "bank_slot_3", b, sizeof b) > 0 && !strcmp(b, ""));
         assert(E->get_param(h, "preset:127", b, sizeof b) > 0 && !strcmp(b, "U90 Big 090"));
         assert(E->get_param(h, "import_status", b, sizeof b) > 0 && strstr(b, "100 imported") && strstr(b, "BANKS"));
         printf("big bank: %s\n", b);
-        E->set_param(h, "bank_slot_4", "1");                     /* Big Bank 3: programs 81-100 */
-        assert(E->get_param(h, "patch_slot_15", b, sizeof b) > 0 && !strcmp(b, "015 Big 095"));
-        E->set_param(h, "patch_slot_15", "1");                   /* Big 095: beyond the PRESET slots */
+        E->set_param(h, "bank_slot_2", "1");
+        E->set_param(h, "patch_page_next", "1");
+        E->set_param(h, "patch_page_next", "1");                 /* page 3 of 4: programs 61-90 */
+        assert(E->get_param(h, "patch_page_text", b, sizeof b) > 0 && !strcmp(b, "PAGE 3/4"));
+        assert(E->get_param(h, "patch_slot_25", b, sizeof b) > 0 && !strcmp(b, "085 Big 085"));
+        E->set_param(h, "patch_page_next", "1");                 /* page 4: programs 91-100 */
+        E->set_param(h, "patch_slot_5", "1");                    /* Big 095: beyond the PRESET slots */
         assert(E->get_param(h, "program_name", b, sizeof b) > 0 && !strcmp(b, "Big 095"));
-        assert(E->get_param(h, "patch_slot_15_on", b, sizeof b) > 0 && atoi(b) == 1);
+        assert(E->get_param(h, "patch_slot_5_on", b, sizeof b) > 0 && atoi(b) == 1);
         assert(E->get_param(h, "cutoff", b, sizeof b) > 0);
         printf("program 95 loaded: cutoff %s, name \"Big 095\"\n", b);
         static char st[8192];
