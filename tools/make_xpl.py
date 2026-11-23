@@ -76,6 +76,12 @@ def main():
     ap.add_argument('--template', help='a preset saved from this plugin on the device (recommended)')
     ap.add_argument('--beta', action='store_true', help='for "Profit-5 2 Beta" (uid Pf5B) instead of the release')
     ap.add_argument('--device', choices=('live3', 'force'), default='live3', help='install path for a preset built without a template')
+    ap.add_argument('--plugin-presets', action='store_true',
+                    help='write the layout of Akai\'s own plugins instead: one flat "Presets" folder for inside the plugin folder, files named '
+                         '"NNN-Category-Name.xpl", which the plugin\'s PRESET popup shows as categories with sub-menus')
+    ap.add_argument('--category', action='append', default=[], metavar='FILE=NAME', help='the category name for a bank file (default: from its file name)')
+    ap.add_argument('--split', type=int, default=40, help='with --plugin-presets: a bank of more programs than this becomes categories of '
+                    'this many, "<name> 1", "<name> 2"... (default 40, the Rev 4 bank size; 0 keeps one category)')
     ap.add_argument('banks', nargs='*', help='.syx, .h2p or .zip bank files')
     a = ap.parse_args()
 
@@ -109,18 +115,36 @@ def main():
 
     date = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
     counts = {}
+    names = {os.path.splitext(os.path.basename(k))[0]: v for k, v in (c.split('=', 1) for c in a.category)}
+    nodash = lambda x: re.sub(r'\s*-\s*', lambda m: '.' if m.group(0) == '-' else ' ', x).strip()   # '-' separates the fields
+    serial = 0
+    per_bank = {}
+    for line in res.stdout.splitlines():
+        per_bank[line.split('\t', 1)[0]] = per_bank.get(line.split('\t', 1)[0], 0) + 1
+    seen = {}
     for line in res.stdout.splitlines():
         bank, name, hexchunk = line.split('\t')
         ch = bytes.fromhex(hexchunk)
         body = b'FBCh' + struct.pack('>I', 1) + fxid + struct.pack('>II', fxver, nprog) + future + struct.pack('>I', len(ch)) + ch
         state = b'CcnK' + struct.pack('>I', 0) + body                  # the MPC writes 0 for the byte size
-        bank_dir = os.path.join(a.out, folder, safe(bank.replace('_', ' ')))
-        os.makedirs(bank_dir, exist_ok=True)
         preset = re.sub(r'^\d{3} ', '', name)
+        if a.plugin_presets:
+            serial += 1
+            cat = nodash(names.get(bank, bank.replace('_', ' ')))
+            k = seen[bank] = seen.get(bank, 0) + 1
+            if a.split and per_bank[bank] > a.split:
+                cat = '%s %d' % (cat, (k - 1) // a.split + 1)
+            preset = nodash(preset)
+            bank_dir = os.path.join(a.out, folder, 'Presets')
+            fname = '%03d-%s-%s' % (serial, safe(cat), safe(preset))
+        else:
+            bank_dir = os.path.join(a.out, folder, safe(bank.replace('_', ' ')))
+            fname = safe(name)
+        os.makedirs(bank_dir, exist_ok=True)
         xml = ('<?xml version="1.0" encoding="UTF-8"?>\r\n\r\n<pluginstate>\r\n'
                '  <version file="1" date="%s"/>\r\n  %s\r\n  <preset>%s</preset>\r\n  <state>%s</state>\r\n</pluginstate>\r\n'
                % (date, plugin_xml, xml_escape(preset), mpc_encode(state)))
-        with open(os.path.join(bank_dir, safe(name) + '.xpl'), 'w', encoding='utf-8', newline='') as f:
+        with open(os.path.join(bank_dir, fname + '.xpl'), 'w', encoding='utf-8', newline='') as f:
             f.write(xml)
         counts[bank] = counts.get(bank, 0) + 1
     for b, n in counts.items():
