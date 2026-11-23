@@ -93,6 +93,43 @@ int main(void) {
     printf("loaded: resonance %s\n", b);
     E->destroy(h);
     unlink(path);
+
+    /* a bank of 100 programs: three BANKS entries of 40 / 40 / 20; U01-U90 are the first 90; program 95 loads from BANKS and keeps
+     * its name through a saved state */
+    {
+        static uint8_t big[100 * 200];
+        size_t bn = 0;
+        for (int i = 0; i < 100; i++) { char nm[24]; snprintf(nm, sizeof nm, "Big %03d", i + 1); params(u, nm, i & 1); u[17] = (uint8_t)i; bn += message(big + bn, 0x32, 0, u); }
+        snprintf(path, sizeof path, "%s/Big_Bank.syx", dir);
+        f = fopen(path, "wb");
+        assert(f && fwrite(big, 1, bn, f) == bn);
+        fclose(f);
+        h = E->create(dir);
+        assert(E->get_param(h, "bank_slot_2", b, sizeof b) > 0 && !strcmp(b, "Big Bank 1"));
+        assert(E->get_param(h, "bank_slot_4", b, sizeof b) > 0 && !strcmp(b, "Big Bank 3"));
+        assert(E->get_param(h, "bank_slot_5", b, sizeof b) > 0 && !strcmp(b, ""));
+        assert(E->get_param(h, "preset:127", b, sizeof b) > 0 && !strcmp(b, "U90 Big 090"));
+        assert(E->get_param(h, "import_status", b, sizeof b) > 0 && strstr(b, "100 imported") && strstr(b, "BANKS"));
+        printf("big bank: %s\n", b);
+        E->set_param(h, "bank_slot_4", "1");                     /* Big Bank 3: programs 81-100 */
+        assert(E->get_param(h, "patch_slot_15", b, sizeof b) > 0 && !strcmp(b, "015 Big 095"));
+        E->set_param(h, "patch_slot_15", "1");                   /* Big 095: beyond the PRESET slots */
+        assert(E->get_param(h, "program_name", b, sizeof b) > 0 && !strcmp(b, "Big 095"));
+        assert(E->get_param(h, "patch_slot_15_on", b, sizeof b) > 0 && atoi(b) == 1);
+        assert(E->get_param(h, "cutoff", b, sizeof b) > 0);
+        printf("program 95 loaded: cutoff %s, name \"Big 095\"\n", b);
+        static char st[8192];
+        assert(E->get_param(h, "state", st, sizeof st) > 0 && strstr(st, " NBig%20095"));
+        void *h2 = E->create(dir);
+        E->set_param(h2, "state", st);
+        assert(E->get_param(h2, "program_name", b, sizeof b) > 0 && !strcmp(b, "Big 095"));
+        printf("a saved state keeps it: \"%s\"\n", b);
+        E->set_param(h2, "preset", "0");
+        assert(E->get_param(h2, "program_name", b, sizeof b) > 0 && !strcmp(b, "1-1 Brass"));
+        E->destroy(h2);
+        E->destroy(h);
+        unlink(path);
+    }
     rmdir(dir);
     puts("ok");
     return 0;

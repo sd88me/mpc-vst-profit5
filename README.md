@@ -41,6 +41,13 @@ free slots named `U.. Init`, then your favourites. The PRESET menu, the step key
 200-program factory bank fills the 90 slots with its first 90). The Programmer page says how many were found. Loose files are only read in the banks folder
 itself (no sub-folders), a zip may contain folders. The patches are yours: none ships with the plugin.
 
+### The BANKS page
+A fourth page, BANKS, lists every bank and every program in it, with no limit: **Factory 1978**, then one bank per file in the `banks`
+folder (a `.syx` of more than 40 programs is split into banks of 40, loose `.h2p` files share a **Repro-5** bank). Tap a bank to browse it,
+tap a program to load it. **BANK** and **PROGRAM** at the top step with their arrows, the data wheel or a Q-Link; the PROGRAMS header has page
+keys. **RANDOM** loads a random imported program; **+FAV** (with the naming keyboard) and **-FAV** are the same favourites as on PROGRAMMER.
+Programs beyond the 90 PRESET slots play from BANKS and keep their name in your project.
+
 ### Every program, in folders (MPC preset files)
 The program list holds 90 imports. To reach every program of every bank, make MPC preset files: one folder per bank, which the MPC's
 preset browser shows as a layer (for example *Factory 1978*, then the bank's programs):
