@@ -422,8 +422,15 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                     float h = ma_vcf3320(&x->vcf3, ftan(3.14159265f * hz * inv), e->hp1, 10 * c[1] / 200e3f, xin, e->kc3, &e->diag_unconv);
                     if (!(h == h) || fabsf(h) > 20) { memset(&x->vcf3, 0, sizeof x->vcf3); e->diag_nan++; h = 0; }
                     /* ESTIMATE: the reissue's Q compensation (maffez.com: an SSI2164 cell on the Q CV adds level at the 3320's output; R274
-                     * 16.2k, "more" at 10-12k) restores 0.68 (11 / 16.2) of the passband's loss in dB: (1 + k)^0.68, k the loop gain */
-                    sum += h * VCF3_OUT * e->qcomp4 * ae;
+                     * 16.2k, "more" at 10-12k) restores 0.68 (11 / 16.2) of the passband's loss in dB: (1 + k)^0.68, k the loop gain.
+                     * It restores the passband, so it is applied to the output's bass (a one-pole lowpass two octaves under the cutoff),
+                     * not to the whole output: the resonant peak and self-oscillation keep the 3320's own level (3.0 beta scaled
+                     * everything, up to +11.7 dB, which made a jump and overdrive once the filter rang, above RES 6) */
+                    float gq = ftan(3.14159265f * 0.25f * hz * inv), lq = (h - x->qlp) * (gq / (1 + gq));
+                    float bass = x->qlp + lq;
+                    x->qlp = bass + lq;
+                    if (!(x->qlp == x->qlp)) x->qlp = 0;
+                    sum += (h + (e->qcomp4 - 1) * bass) * VCF3_OUT * ae;
                     continue;
                 }
                 float g = ftan(3.14159265f * hz * inv), G0 = g / (1 + g);
