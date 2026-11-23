@@ -63,7 +63,7 @@ iin = abs(float(re.findall(r'^i\(vin1\) = ([-+0-9.eE]+)', m, re.M)[0]))
 check('mixer: one osc at 10, 2040 stage level (V)', '%.3f' % (iin * 10e3), '0.45 x level into a +-1.4 tanh', 'open',
       'stage outputs swing +-1 V (datasheet); docs/improvements.md')
 
-# 8. the filter as a circuit: ma_vcf2040 (analog/mpc_analog_p5.h) against ngspice of the same circuit (circuits/vcf2040*.cir)
+# 8. the filter as a circuit: ma_vcf2040 (analog/mpc_analog.h) against ngspice of the same circuit (circuits/vcf2040*.cir)
 def num(v):
     m = {'p': 1e-12, 'n': 1e-9, 'u': 1e-6, 'm': 1e-3, 'k': 1e3}
     return float(v[:-1]) * m[v[-1]] if v[-1] in m else float(v)

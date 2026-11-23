@@ -55,7 +55,7 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   sheet (2 V/decade, x1.1 S&H mod) anchored at 0.9 s for 6.250 V (4-10/4-11), 1 ms-100 s. Before / after: service checks 4 failed -> 0
   (C3 413 -> 440.1 Hz, C5 1663 -> 1772 Hz, attack 1.58 -> 0.899 s); goldens model 0: 304/304 identical, model 1: the 152 Rev 2 renders
   differ, Rev 4 identical; corners 256/0 both; host test OK; CPU unchanged (x86 Eco 2.7 %, High 5.4 %). Not yet heard on a device.
-- **2026-11-22, round 2 (model 1, Rev 2 only; offline): the filter section as a circuit.** `ma_vcf2040` (analog/mpc_analog_p5.h): four
+- **2026-11-22, round 2 (model 1, Rev 2 only; offline): the filter section as a circuit.** `ma_vcf2040` (analog/mpc_analog.h): four
   2040 cells (OTA tanh, 1000 pF, +-1 V), the 10k / 10k / 200 networks, U479 (x20, +-13.5 V), the C413 / R471 high-pass and the 2020
   resonance VCA, solved implicitly per sample. Against ngspice of the same circuit (`circuits/vcf2040*.cir`): gains within 0.09 %, -3 dB
   267.8 / 267.6 Hz, self-oscillation 620.87 / 620.85 Hz at 0.3548 / 0.3550 V; 0 unconverged samples. The mixer and resonance levels come
@@ -80,7 +80,7 @@ and its limits are in `docs/ROADMAP-accuracy.md`; the circuit as read is in `doc
   off: release 8.5 ms to -40 dB under the 2050 law (model 0: 5 ms). The LFO checked against the parts list, the firmware and the pot
   tapers: the circuit reading stands (item 2). Check set: model 0 304/304 identical, Rev 4 identical, service 0 failed, corners 256/0,
   engine and host tests OK.
-- **2026-11-23, round 6 (model 1, Rev 4 only; offline): the Rev 3 filter section as a circuit.** `ma_vcf3320` (analog/mpc_analog_p5.h):
+- **2026-11-23, round 6 (model 1, Rev 4 only; offline): the Rev 3 filter section as a circuit.** `ma_vcf3320` (analog/mpc_analog.h):
   four 3320 sections (current-mode cells, 150 pF, 100k / 91k / 240k), the 1.06 Hz output coupling, U475 x3.4, the Q IN network (with
   C4146) and the Q VCA. Against ngspice of the same circuit (`circuits/vcf3320*.cir`): gains within 0.24 % (48 kHz) / 0.08 % (96 kHz),
   -3 dB 433.4 / 433.1 Hz, self-oscillation 976.64 / 976.50 Hz at 0.8821 / 0.8837 V, 0 unconverged samples (MA_VCF_ITER 12: the

@@ -1,4 +1,4 @@
-/* The Rev 3 filter kernel (ma_vcf3320, analog/mpc_analog_p5.h) against ngspice of the same circuit (circuits/vcf3320*.cir): the same
+/* The Rev 3 filter kernel (ma_vcf3320, analog/mpc_analog.h) against ngspice of the same circuit (circuits/vcf3320*.cir): the same
  * cases as the decks. gcc -O2 -std=c11 -Ianalog tools/vcf3320_compare.c -lm -o build/vcf3320_compare && build/vcf3320_compare [fs] */
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <math.h>
 #include "mpc_analog.h"
-#include "mpc_analog_p5.h"
+#include "mpc_analog.h"
 
 static double FS = 96000;
 static const double W0 = 0.0857 / (90909.09 * 150e-12);   /* the deck's cells: gain a / (R_eq C), rad/s */

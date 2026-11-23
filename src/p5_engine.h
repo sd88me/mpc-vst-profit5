@@ -11,7 +11,6 @@
 #endif
 #include <stdint.h>
 #include "../analog/mpc_analog.h"
-#include "../analog/mpc_analog_p5.h"
 
 #define P5_VOICES 5
 
@@ -51,7 +50,7 @@ typedef struct {
     float tol[8];                       /* static per-voice tolerances (-1..1) */
     float tri_sym;
     int kick;
-    ma_vcf2040_t vcf;                   /* model 1 filter section (analog/mpc_analog_p5.h) */
+    ma_vcf2040_t vcf;                   /* model 1 filter section (analog/mpc_analog.h) */
     ma_vcf3320_t vcf3;                  /* model 1, Rev 4: the Rev 3 filter section */
     float qlp;                          /* model 1, Rev 4: the filter output's bass, for the Q compensation */
     float pmx, hpa, hpb, mixa, mixb;    /* model 1: osc B node X (V), the mixer inputs' 8 Hz coupling states and outputs (V) */

@@ -1,4 +1,4 @@
-/* The circuit filter kernel (ma_vcf2040, analog/mpc_analog_p5.h) against ngspice of the same circuit (circuits/vcf2040*.cir).
+/* The circuit filter kernel (ma_vcf2040, analog/mpc_analog.h) against ngspice of the same circuit (circuits/vcf2040*.cir).
  * Prints the same cases as the decks: small-signal gain of OUT4 (1 V equivalent input), and self-oscillation at RES 10.
  * gcc -O2 -std=c11 -Ianalog tools/vcf_compare.c -lm -o build/vcf_compare && build/vcf_compare [fs] */
 #define _USE_MATH_DEFINES
@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <math.h>
 #include "mpc_analog.h"
-#include "mpc_analog_p5.h"
+#include "mpc_analog.h"
 
 static double FS = 96000;
 static const double W0 = 10.28e-6 * 192.31 / (2 * 0.025693 * 1e4 * 1e-9);   /* I_ABC 10.28 uA: the cells' pole, rad/s */

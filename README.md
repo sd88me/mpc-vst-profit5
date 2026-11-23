@@ -209,7 +209,7 @@ Listen offline: `gcc -O2 -std=c11 tools/render_wav.c src/engine.c -lm -o render_
 ## Credits and licence
 
 MIT, see `LICENSE`. The analog kernels (`analog/mpc_analog.h`) are shared with the other mpc-vst-plugins ports and written from the published papers
-(Valimaki and Huovilainen, Zavalishin); the SSM kernels in `analog/mpc_analog_p5.h` are new. The skin's lettering is GNU FreeSans (Liberation Sans, SIL OFL, where FreeSans is not installed). Built on
+(Valimaki and Huovilainen, Zavalishin); the SSM and CEM kernels in `analog/mpc_analog.h` (merged into the shared header) are new. The skin's lettering is GNU FreeSans (Liberation Sans, SIL OFL, where FreeSans is not installed). Built on
 [mpc-vst-plugins](https://github.com/sd88me/mpc-vst-plugins), whose wrapper, skin renderer and release tools do the rest. The Minimoog model
 [CA-72](https://github.com/idlefoundry/ca-72) is GPL and none of its code is used here; its method of checking a real-time model against a SPICE simulation
 inspired `circuits/`.

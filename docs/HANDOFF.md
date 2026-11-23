@@ -66,6 +66,6 @@ Re-run the CI build: Actions, "Release (draft)", input `version` (a published ta
 ## 6. Things that will trip you
 - `engine.h` in this repo is `src/p5_engine.h`: the wrapper has its own `engine.h` on the include path.
 - The skin needs GNU FreeSans (`fonts-freefont-ttf`) and Pillow; the Playwright 1.56 renderer is needed by `gen_vst.py`.
-- `analog/mpc_analog.h` is a synced copy of morpho-PE's; `analog/mpc_analog_p5.h` holds our new kernels until they move there.
+- `analog/mpc_analog.h` is a synced copy of morpho-PE's; the SSM / CEM kernels were merged into it 2026-11-24 (no `_p5.h` any more).
 - Don't commit ROMs, the manual, scans, photos or `.syx` banks. The README's disclaimer depends on it.
 - The product name, plugin id and skin art must not say "Prophet", "Sequential" or "Dave Smith". The README may say what it's modelled on.
