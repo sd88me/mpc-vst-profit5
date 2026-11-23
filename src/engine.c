@@ -111,6 +111,9 @@ static void set_rate(p5_engine_t *e) {
     e->hp1 = ftan(3.14159265f * 1.0638f / e->fsi);            /* Rev 3: C4165 / R4468 */
     e->kc3 = 1 - expf(-1 / (e->fsi * 10e-6f * 3e3f));         /* Rev 3: C4146 / R4424 */
     for (int i = 0; i < 10; i++) ma_cv_init(&e->cv[i], 0.002f, e->fsi);    /* S&H + CV filter RC, about 2 ms */
+    e->cv_a2 = e->cv[0].a;
+    e->cv_a4 = 1 - expf(-1 / (0.025f * e->fsi));   /* model 1, Rev 4: the reissue's pots are read finely; the MPC sends a knob turn as jumps
+                                                   * tens of ms apart, which 2 ms leaves audible as steps: 25 ms joins them up */
     for (int v = 0; v < P5_VOICES; v++)
         for (int d = 0; d < 3; d++) ma_drift_init(&e->v[v].drift[d], 7 * v + d + 1, e->fsi / (CTL_MASK + 1));
     env_coefs(e);
@@ -276,6 +279,10 @@ void p5_render(p5_engine_t *e, float *out, int n) {
     float maxp = 0;
     for (int v = 0; v < nv; v++) if (e->v[v].press > maxp) maxp = e->v[v].press;
 
+    {
+        const float a = e->model >= 1 && sw(e, P5P_REV) ? e->cv_a4 : e->cv_a2;
+        for (int k = 0; k < 10; k++) e->cv[k].a = a;
+    }
     for (int i = 0; i < n; i++) {
         float acc[2] = { 0, 0 };
         for (int o = 0; o < e->os; o++) {

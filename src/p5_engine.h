@@ -82,6 +82,7 @@ typedef struct {
     float hp1, kc3;                     /* model 1, Rev 4: the 3320 section's output coupling and C4146 step */
     float qcomp4;                       /* model 1, Rev 4: the Q compensation's gain (ESTIMATE) */
     float fvca[257];                    /* model 1, Rev 2: the final VCA's gain over the amp envelope (ESTIMATE: the 2020's diode law) */
+    float cv_a2, cv_a4;                 /* the pot CV RC: 2 ms (the S&H and CV filter), 25 ms for Rev 4 in model 1 (smooth pots) */
     int model;                          /* model version (docs/improvements.md): 0 = the 2.0.0 laws, kept for old projects; new
                                            instances get P5_MODEL_LATEST. Saved in the state string as "m<n>" */
 } p5_engine_t;
