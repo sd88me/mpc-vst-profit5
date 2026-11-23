@@ -4,7 +4,7 @@
 #define MA_MASTER_HDR "../analog/mpc_analog.h"
 #endif
 #include MA_MASTER_HDR  /* synced copy of morpho-PE's master (analog/sync.sh) */
-#include "../analog/mpc_analog_p5.h"
+#include "../analog/mpc_analog.h"
 int main(void) {
     const float fs = 48000;
     /* envelope: attack reaches 1 in about a_s, decays to sustain, releases to idle */

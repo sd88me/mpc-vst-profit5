@@ -1,0 +1,64 @@
+[
+  {
+    "path": "banks",
+    "label": "Patch banks (.syx, .h2p, .zip)",
+    "description": "Your own patches: Prophet-5 / Prophet-10 Rev 4 SysEx program banks, u-he Repro-5 patches, or zips of either. They appear on the BANKS page, one bank per file, and the first 90 also appear in the PRESET menu as U01-U90.",
+    "hint": "The plugin reads the banks folder when it loads: remove Profit-5 from the track and add it again (or reopen the project) after uploading. Loose files must sit in banks/ itself; a zip may contain folders.",
+    "rules": [
+      {
+        "label": "Prophet-5 / Prophet-10 Rev 4 SysEx bank",
+        "ext": [
+          ".syx"
+        ],
+        "header_hex": "f00130",
+        "size_min": 158,
+        "size_max": 1048576
+      },
+      {
+        "label": "Prophet-5 / Prophet-10 Rev 4 SysEx bank",
+        "ext": [
+          ".syx"
+        ],
+        "header_hex": "f00131",
+        "size_min": 158,
+        "size_max": 1048576
+      },
+      {
+        "label": "Prophet-5 / Prophet-10 Rev 4 SysEx bank",
+        "ext": [
+          ".syx"
+        ],
+        "header_hex": "f00132",
+        "size_min": 158,
+        "size_max": 1048576
+      },
+      {
+        "label": "Prophet-5 / Prophet-10 Rev 4 SysEx bank",
+        "ext": [
+          ".syx"
+        ],
+        "header_hex": "f00133",
+        "size_min": 158,
+        "size_max": 1048576
+      },
+      {
+        "label": "Repro-5 patch",
+        "ext": [
+          ".h2p"
+        ],
+        "signature": "#AM=Repro-5",
+        "size_max": 262144
+      },
+      {
+        "label": "Zip of .syx / .h2p files",
+        "ext": [
+          ".zip"
+        ],
+        "header_hex": "504b0304",
+        "size_max": 33554432,
+        "unverified": true,
+        "note": "A zip; the plugin reads the .syx and .h2p files inside it when it loads, and the BANKS page shows how many it found."
+      }
+    ]
+  }
+]

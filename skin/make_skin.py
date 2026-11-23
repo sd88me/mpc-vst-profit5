@@ -358,11 +358,16 @@ def tab_osc():
 
 def tab_filter():
     t = Tab("FILTER", "FILTER AMP")
-    t.box(42, 26, 410, 205, "GLIDE / UNISON")
-    t.knob("glide", 140, 108, r=30, label="GLIDE RATE")
-    t.switch("unison", 312, 104, label="UNISON")
+    t.box(42, 26, 410, 205, "GLIDE / VOICES")
+    t.knob("glide", 104, 108, r=30, label="GLIDE RATE")
+    t.knob("voices", 226, 108, r=26, label="VOICES", scale=False)   # VOICES and QUALITY from PROGRAMMER (3.0: BANKS took its place)
+    for i, n in enumerate("12345"):
+        x, y = polar(226, 108, 40, -SWEEP + 2 * SWEEP * i / 4)
+        t.text(x, y, n, 11)
+    t.switch("unison", 348, 104, label="UNISON")
     t.box(436, 26, 1238, 402, "FILTER")
-    t.switch("rev", 500, 104, above="1/2    3", label="REV")
+    t.switch("rev", 500, 104, above="REV 2 / 4", label="REV")
+    t.switch("quality", 500, 301, above="ECO / HIGH", label="QUALITY")
     t.knob("cutoff", 634, 108, r=30, label="CUTOFF"); t.knob("reso", 776, 108, r=30, label="RESONANCE")
     t.knob("env_amt", 918, 108, r=30, label="ENVELOPE AMOUNT")
     t.switch("kbd_half", 1060, 104, above="HALF / FULL"); t.switch("f_kbd", 1160, 104, label="KEYBOARD")
@@ -379,9 +384,9 @@ def tab_filter():
     for k, x, s in (("a_attack", 634, "ATTACK"), ("a_decay", 776, "DECAY"), ("a_sustain", 918, "SUSTAIN"), ("a_release", 1060, "RELEASE")):
         t.knob(k, x, 502, r=30, label=s)
     t.switch("release", 1170, 498, label="RELEASE")
-    t.qlinks = [("FILTER", ["glide", "unison", "cutoff", "reso", "env_amt", "f_attack", "f_decay", "f_sustain", "f_release"]),
+    t.qlinks = [("FILTER", ["glide", "voices", "unison", "cutoff", "reso", "env_amt", "f_attack", "f_decay", "f_sustain", "f_release"]),
                 ("AMP", ["a_attack", "a_decay", "a_sustain", "a_release", "vintage", "tune", "volume", "vel_filter", "vel_amp", "at_filter", "at_lfo"]),
-                ("FILTER SWITCHES", ["rev", "f_kbd", "kbd_half", "release"])]
+                ("FILTER SWITCHES", ["rev", "quality", "f_kbd", "kbd_half", "release"])]
     return t
 
 

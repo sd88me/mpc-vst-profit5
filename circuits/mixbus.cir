@@ -1,0 +1,22 @@
+* Voice mixer bus (SD411, PDF p. 86): MIX OSC A AMT VCA (SSM 2020: I_out = I_c (V+ - V-) / 14 V, datasheet p. 2) with control pins 9, 10,
+* 12 tied to R482 39k from a 10 V CV and the emitter grounded (a diode-connected control transistor), the osc's +5 V saw peak through R456
+* 10k into R481 200k, the noise feed R460 100k (noise at 0 V here), and R476 200k into stage 1's IN (near 0 V: the 200 ohm shunt).
+* Prints I_c, the bus voltage and the current into IN1; stage 1's output is that current times R2 (10k).
+.model DQ D(IS=1e-14 N=1)
+Vcv cv 0 10
+R482 cv cc 39k
+Vic cc ccd 0
+Dcon ccd 0 DQ
+Vsaw s 0 5
+R456 s sp 10k
+R481 sp 0 200k
+Bout 0 bus I=i(Vic)*v(sp)/14
+R460 bus 0 100k
+R476 bus in1 200k
+Vin1 in1 0 0
+.control
+set noaskquit
+op
+print i(Vic) v(bus) i(Vin1)
+.endc
+.end

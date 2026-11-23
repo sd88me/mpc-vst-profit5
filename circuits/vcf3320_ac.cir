@@ -1,0 +1,17 @@
+* Rev 3 filter (vcf3320.cir), small signal: |OUT D| per 0.909 V of equivalent input (1e-5 A into stage 1 = 0.909 V at 90.9k).
+.include vcf3320.cir
+.control
+set noaskquit
+foreach icv 0 10u 20u 25u
+  alterparam icr = $icv
+  reset
+  ac dec 2000 5 20k
+  let g = mag(v(o4))/0.909
+  meas ac g20 find g at=20
+  meas ac g100 find g at=100
+  meas ac g900 find g at=900
+  meas ac f3 when g=0.7071 fall=last
+  echo "ROW $icv $&g20 $&g100 $&g900 $&f3"
+end
+.endc
+.end

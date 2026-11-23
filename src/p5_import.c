@@ -2,6 +2,7 @@
  * See p5_import.h. */
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 #include "p5_import.h"
 
 #define MAXBITS 15
@@ -513,4 +514,85 @@ void p5_import_init(p5_import_t *out)
     memset(&h, 0, sizeof h);
     map_h2p(&h, out);
     memcpy(out->name, "Init", 5);
+}
+
+/* ---- Prophet-5 / Prophet-10 Rev 4 SysEx program dumps (.syx) ------------------------------------------------------------------
+ * Sequential's "Prophet-5 MIDI Implementation" 1.4 (docs/SOURCES.md): a program is F0 01 <id> 02 <group> <program> <152 bytes> F7, an
+ * edit buffer F0 01 <id> 03 <152 bytes> F7. The 152 bytes are 128 in "packed MS bit" form (8-byte packets: a byte of the next seven's top
+ * bits, LSB first, then the seven). The 128 bytes follow the NRPN list, one byte per parameter; bytes 65-84 hold the name (the factory
+ * banks, checked 2026-11-23). The document gives the id as 0x31; the factory banks use 0x32: 0x30-0x33 are accepted. Ranges as the
+ * banks show them: the two oscillator frequencies 0-120 (two steps a semitone, the original's five octaves), the other knobs 0-127
+ * (pulse widths sit at 63-65), switches 0/1, filter keyboard 0/1/2 (off, half, full), filter rev 0 (Rev 1/2) / 1 (Rev 3). Not carried
+ * (Profit-5 has no such control): aftertouch to amp, unison detune, unison note map, pitch-wheel range, retrigger. */
+static void unpack_ms(const uint8_t *p, size_t n, uint8_t *out, size_t cap, size_t *outn) {
+    size_t o = 0;
+    for (size_t k = 0; k + 1 < n && o < cap; k += 8) {
+        uint8_t hi = p[k];
+        for (size_t b = 1; b < 8 && k + b < n && o < cap; b++) out[o++] = (uint8_t)((p[k + b] & 0x7F) | (((hi >> (b - 1)) & 1) << 7));
+    }
+    *outn = o;
+}
+static void map_rev4(const uint8_t *u, p5_import_t *o) {
+#define K(n) (u[n] / 127.f)
+#define SW(n) (u[n] ? 1.f : 0.f)
+    put(o, P5P_A_FREQ, u[0] / 120.f);   put(o, P5P_B_FREQ, u[1] / 120.f);   put(o, P5P_B_FINE, K(2));
+    put(o, P5P_A_SAW, SW(3));           put(o, P5P_A_PULSE, SW(4));
+    put(o, P5P_B_SAW, SW(5));           put(o, P5P_B_TRI, SW(6));           put(o, P5P_B_PULSE, SW(7));
+    put(o, P5P_A_PW, K(8));             put(o, P5P_B_PW, K(9));
+    put(o, P5P_A_SYNC, SW(10));         put(o, P5P_B_LO, SW(11));           put(o, P5P_B_KBD, SW(12));
+    put(o, P5P_GLIDE, K(13));
+    put(o, P5P_MIX_A, K(14));           put(o, P5P_MIX_B, K(15));           put(o, P5P_MIX_NOISE, K(16));
+    put(o, P5P_CUTOFF, K(17));          put(o, P5P_RESO, K(18));
+    put(o, P5P_F_KBD, u[19] ? 1.f : 0.f); put(o, P5P_KBD_HALF, u[19] == 1 ? 1.f : 0.f);
+    put(o, P5P_REV, SW(20));
+    put(o, P5P_LFO_FREQ, K(21));        put(o, P5P_LFO_INIT, K(22));
+    put(o, P5P_LFO_SAW, SW(23));        put(o, P5P_LFO_TRI, SW(24));        put(o, P5P_LFO_SQR, SW(25));
+    put(o, P5P_WM_MIX, K(26));
+    put(o, P5P_WM_FA, SW(27));          put(o, P5P_WM_FB, SW(28));          put(o, P5P_WM_PWA, SW(29));
+    put(o, P5P_WM_PWB, SW(30));         put(o, P5P_WM_FILT, SW(31));
+    put(o, P5P_PM_FENV, K(32));         put(o, P5P_PM_OSCB, K(33));
+    put(o, P5P_PM_DEST_FA, SW(34));     put(o, P5P_PM_DEST_PWA, SW(35));    put(o, P5P_PM_DEST_FILT, SW(36));
+    put(o, P5P_VINTAGE, K(37));
+    put(o, P5P_AT_FILT, SW(38));
+    put(o, P5P_ENV_AMT, K(40));
+    put(o, P5P_VEL_FILT, SW(41));       put(o, P5P_VEL_AMP, SW(42));
+    put(o, P5P_F_A, K(43)); put(o, P5P_A_A, K(44)); put(o, P5P_F_D, K(45)); put(o, P5P_A_D, K(46));
+    put(o, P5P_F_S, K(47)); put(o, P5P_A_S, K(48)); put(o, P5P_F_R, K(49)); put(o, P5P_A_R, K(50));
+    put(o, P5P_RELEASE, SW(51));        put(o, P5P_UNISON, SW(52));
+    if (u[52] && u[53]) put(o, P5P_NVOICES, ((u[53] > 5 ? 5 : u[53]) - 1) / 4.f);   /* unison on that many voices (Profit-5 has five) */
+#undef K
+#undef SW
+    int n = 0;
+    for (int i = 65; i < 85 && n < (int)sizeof o->name - 1; i++) o->name[n++] = (char)(u[i] >= 32 && u[i] < 127 ? u[i] : ' ');
+    while (n > 0 && o->name[n - 1] == ' ') n--;
+    o->name[n] = 0;
+}
+int p5_import_syx(const uint8_t *data, size_t len, p5_syx_cb cb, void *user)
+{
+    int count = 0;
+    for (size_t i = 0; i < len; i++) {
+        if (data[i] != 0xF0) continue;
+        size_t j = i + 1;
+        while (j < len && data[j] != 0xF7 && !(data[j] & 0x80)) j++;
+        if (j >= len || data[j] != 0xF7) { i = j; continue; }            /* unterminated, or interrupted by another status byte */
+        const uint8_t *m = data + i;
+        size_t mlen = j - i + 1, hdr = 0;
+        if (mlen > 4 && m[1] == 0x01 && m[2] >= 0x30 && m[2] <= 0x33) hdr = m[3] == 0x02 ? 6 : m[3] == 0x03 ? 4 : 0;
+        if (hdr && mlen - hdr - 1 >= 147) {                                  /* 147 packed bytes give the 128 */
+            uint8_t u[160];
+            size_t un = 0;
+            memset(u, 0, sizeof u);
+            unpack_ms(m + hdr, mlen - hdr - 1, u, sizeof u, &un);
+            if (un >= 128) {
+                p5_import_t o;
+                p5_import_init(&o);
+                map_rev4(u, &o);
+                if (!o.name[0]) snprintf(o.name, sizeof o.name, "Program %d", count + 1);
+                count++;
+                if (cb && cb(&o, user)) return count;
+            }
+        }
+        i = j;
+    }
+    return count;
 }

@@ -1,0 +1,18 @@
+* Rev 2 filter, small signal (vcf2040.cir): the 4-pole response at CONT 0 and with resonance. The input is 1e-4 A into IN1 (the
+* equivalent of 1 V through stage 1's 10k), so |v(o4)| is the gain against that.
+.include vcf2040.cir
+.control
+set noaskquit
+foreach icv 0 100u 200u 250u 280u
+  alterparam ic = $icv
+  reset
+  ac dec 2000 5 20k
+  let g = mag(v(o4))
+  meas ac g20 find g at=20
+  meas ac g30 find g at=30
+  meas ac g566 find g at=566
+  meas ac f3 when g=0.7071 fall=last
+  echo "ROW $icv $&g20 $&g30 $&g566 $&f3"
+end
+.endc
+.end

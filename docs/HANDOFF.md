@@ -37,6 +37,7 @@ The device is shared with your live setup. Save your project first; the installe
 - **Touch boxes:** `gen_vst.py` prints "TOUCH ... overlap"; the knob box size is `bw` in `make_skin.py`.
 
 ## 3. Open engine work (in order of value)
+See also `docs/ROADMAP-accuracy.md`: what can be derived without a recording (the filter as a circuit, service-manual checks, the patch sheets as reference data). Started 2026-11-22 (offline): the schematic as read is `docs/CIRCUIT.md`, the tracker `docs/improvements.md`, sources `docs/SOURCES.md`.
 1. **Fit the guessed laws to a recording of a real unit** (listed in `docs/ENGINE.md`): envelope and LFO anchors, cutoff span and keyboard scaling, resonance law,
    Poly-Mod and Wheel-Mod depths, mixer level, glide range, unison detune.
 2. **The three unread summer inputs** (412k, 182k, 2.21M on the master summers, `docs/ENGINE.md`): need a clearer scan or wire tracing. They set the filter and PW modulation depths.
@@ -65,6 +66,6 @@ Re-run the CI build: Actions, "Release (draft)", input `version` (a published ta
 ## 6. Things that will trip you
 - `engine.h` in this repo is `src/p5_engine.h`: the wrapper has its own `engine.h` on the include path.
 - The skin needs GNU FreeSans (`fonts-freefont-ttf`) and Pillow; the Playwright 1.56 renderer is needed by `gen_vst.py`.
-- `analog/mpc_analog.h` is a synced copy of morpho-PE's; `analog/mpc_analog_p5.h` holds our new kernels until they move there.
+- `analog/mpc_analog.h` is a synced copy of morpho-PE's; the SSM / CEM kernels were merged into it 2026-11-24 (no `_p5.h` any more).
 - Don't commit ROMs, the manual, scans, photos or `.syx` banks. The README's disclaimer depends on it.
 - The product name, plugin id and skin art must not say "Prophet", "Sequential" or "Dave Smith". The README may say what it's modelled on.

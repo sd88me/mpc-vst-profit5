@@ -120,14 +120,14 @@ int main(int argc, char** argv)
     a->dispatcher(a, effGetEffectName, 0, 0, name, 0);
     CHECK(a->uniqueID == (VstInt32)P5_EXPECT_UID, "uid %08x", (unsigned)a->uniqueID);
     CHECK(!std::strcmp(name, P5_EXPECT_NAME), "name \"%s\"", name);
-    CHECK(a->numParams == 110, "110 params: the 64 of 0.2.1 + favourites and keyboard (%d)", a->numParams);
-    CHECK(a->dispatcher(a, effGetVendorVersion, 0, 0, nullptr, 0) == 2000, "version 2000");
+    CHECK(a->numParams == 176, "176 params: the 64 of 0.2.1 + favourites and keyboard + BANKS (%d)", a->numParams);
+    CHECK(a->dispatcher(a, effGetVendorVersion, 0, 0, nullptr, 0) == 3000, "version 3000");
     {
         int bad = 0, i = 0;
         std::ifstream f("vst/params.lock");
         std::string line;
         while (std::getline(f, line)) if (!line.empty() && line[0] != '#' && line != g_pspecs[i++].key) bad++;
-        CHECK(i == 110 && bad == 0, "order = vst/params.lock (%d keys, %d differ)", i, bad);
+        CHECK(i == 176 && bad == 0, "order = vst/params.lock (%d keys, %d differ)", i, bad);
         char pn[64] = {0};
         a->dispatcher(a, effGetParamName, PMF, 0, pn, 0);
         CHECK(PMF == 0 && PRE == 58 && ISTAT == 63, "param 0 is PM Filt Env (\"%s\"), preset 58, import_status 63", pn);
@@ -207,6 +207,36 @@ int main(int argc, char** argv)
     a->setParameter(a, PRE, norm(PRE, 6));
     settle(a);
     CHECK(engi(a, "preset") == 6 && near(plainOf(a, CUT), engf(a, "cutoff")), "the Program knob loads 6, the controls follow (cutoff %.2f)", plainOf(a, CUT));
+
+    std::printf("== BANKS page\n");
+    {
+        auto tap = [&](const char* k) { const int i = idx(k); a->setParameter(a, i, 1.0f); settle(a); a->setParameter(a, i, 0.0f); settle(a); };
+        const int BB = idx("browse_bank_index"), BP = idx("bank_prog"), T7 = idx("patch_slot_7"), BT2 = idx("bank_slot_2");
+        CHECK(disp(a, BB) == "Factory 1978" && disp(a, idx("bank_slot_1")) == "Factory 1978", "the browser follows program 6: BANK shows \"%s\"", disp(a, BB).c_str());
+        CHECK(disp(a, T7) == progName(a, 6) && plainOf(a, T7) > 0.5f, "program tile 7 is \"%s\", lit", disp(a, T7).c_str());
+        CHECK(plainOf(a, idx("patch_slot_1")) < 0.5f && disp(a, idx("patch_slot_40")).empty(), "the others are dark; past the bank's 38 they are empty");
+        CHECK(disp(a, BT2) == "Repro-5" && disp(a, idx("bank_slot_3")).empty(), "bank tile 2 is the loose .h2p files (\"%s\")", disp(a, BT2).c_str());
+        tap("bank_slot_2");
+        CHECK(disp(a, BB) == "Repro-5" && plainOf(a, BT2) > 0.5f, "a bank tile browses it (\"%s\", lit)", disp(a, BB).c_str());
+        CHECK(engi(a, "preset") == 6, "browsing loads nothing (program %d)", engi(a, "preset"));
+        CHECK(disp(a, idx("patch_slot_1")) == "001 Test Brass" && plainOf(a, T7) < 0.5f, "its program tiles: \"%s\"", disp(a, idx("patch_slot_1")).c_str());
+        tap("patch_slot_1");
+        CHECK(engi(a, "preset") == 38 && disp(a, PNAME) == "U01 Test Brass", "a program tile loads it, through its PRESET slot (\"%s\")", disp(a, PNAME).c_str());
+        CHECK(disp(a, BP) == "001 Test Brass" && plainOf(a, idx("patch_slot_1")) > 0.5f, "PROGRAM shows it (\"%s\"), its tile is lit", disp(a, BP).c_str());
+        CHECK(disp(a, idx("patch_page_text")) == "PAGE 1/1", "page text \"%s\"", disp(a, idx("patch_page_text")).c_str());
+        tap("next_browse_bank");
+        CHECK(disp(a, BB) == "Factory 1978", "BANK + wraps to the first bank (\"%s\")", disp(a, BB).c_str());
+        tap("bank_prog_next");
+        CHECK(engi(a, "preset") == 38, "PROGRAM + steps within the loaded bank (one program: stays, %d)", engi(a, "preset"));
+        a->setParameter(a, BP, norm(BP, 0));
+        settle(a);
+        tap("random_patch");
+        CHECK(engi(a, "preset") == 38, "RANDOM picks an imported program (%d)", engi(a, "preset"));
+        p5_dbg_no_ignore(a);
+        a->dispatcher(a, effSetProgram, 0, 6, nullptr, 0);
+        settle(a);
+        CHECK(disp(a, BB) == "Factory 1978" && plainOf(a, T7) > 0.5f, "a PRESET pick moves the browser to it");
+    }
 
     std::printf("== state round trip\n");
     a->setParameter(a, RESO, norm(RESO, 7.5f));

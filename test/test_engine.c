@@ -90,11 +90,12 @@ int main(void) {
         printf("rev %d self-oscillation: peak %.3f at %.0f Hz\n", r ? 4 : 2, peak(buf + FS / 2, FS / 2), f);
         assert(peak(buf + FS / 2, FS / 2) > 0.02f && f > 250 && f < 800);
     }
-    /* 7. bass under resonance: Rev 2 loses more than Rev 4 */
+    /* 7. bass under resonance: in model 0 (2.0.0's voicing) Rev 2 loses more than Rev 4. Model 1's Rev 4 is the Rev 3 circuit, which loses
+     * bass as Rev 2 does; the reissue's Q compensation is not modelled yet (docs/improvements.md) */
     {
         float pk[2];
         for (int r = 0; r < 2; r++) {
-            p5_init(&E, FS); plain(&E, (float)r, 0);
+            p5_init(&E, FS); E.model = 0; plain(&E, (float)r, 0);
             E.p[P5P_A_FREQ] = 0; E.p[P5P_CUTOFF] = 0.75f; E.p[P5P_RESO] = 0.7f;
             p5_note_on(&E, 36, 1);
             p5_render(&E, buf, FS);
@@ -130,6 +131,7 @@ int main(void) {
         int t[2];
         for (int j = 0; j < 2; j++) {
             p5_init(&E, FS); plain(&E, 0, 0); p5_set(&E, P5P_GLIDE, 0.8f); p5_set(&E, P5P_NVOICES, 0);
+            p5_set(&E, P5P_UNISON, 1);                     /* model 1, Rev 2: the glide circuit works only in unison (manual 2) */
             p5_note_on(&E, 48, 1); p5_render(&E, buf, 64);
             p5_note_on(&E, j ? 72 : 60, 1);
             int n = 0;
@@ -139,6 +141,14 @@ int main(void) {
         double ratio = (double)t[1] / t[0];
         printf("glide: 12 semitones %.0f ms, 24 semitones %.0f ms (ratio %.2f)\n", 1e3 * t[0] / FS, 1e3 * t[1] / FS, ratio);
         assert(ratio > 1.8 && ratio < 2.2);
+        /* and not in poly mode on Rev 2 (model 1); model 0 and Rev 4 keep their poly glide */
+        for (int m = 0; m < 2; m++) {
+            p5_init(&E, FS); E.model = m; plain(&E, 0, 0); p5_set(&E, P5P_GLIDE, 0.8f); p5_set(&E, P5P_NVOICES, 0);
+            p5_note_on(&E, 48, 1); p5_render(&E, buf, 64); p5_note_on(&E, 60, 1); p5_render(&E, buf, 64);
+            float d = fabsf(E.v[E.rr].semis - E.v[E.rr].semis_target);
+            printf("poly glide, model %d: %.2f semitones still to go after 1.3 ms\n", m, d);
+            assert(m ? d < 0.01f : d > 1);
+        }
     }
     puts("ok");
     return 0;

@@ -1,0 +1,48 @@
+* Rev 2 filter section (SD411, docs/CIRCUIT.md "Filter"): SSM 2040 four lowpass real-pole cells (datasheet Fig. 1), the board's
+* 10k / 10k / 200 ohm networks and 1000 pF caps, U479 (x20, current to voltage, rails at +-13.5 V), C413 / R471 high-pass, and the
+* RES FDBK VCA (SSM 2020, I_out = I_c (V+ - V-) / 14 V) injecting into IN1.
+* The 2040 cells are behavioural, from the datasheet: an OTA I = I_ABC tanh(V_IN / 2 V_T) (gm = I_ABC / 2 V_T: 1/5k at CONT 0
+* is I_ABC = 10.3 uA), CAP to a unity buffer, the swing limited to +-1 V. ASSUMED: the limit acts on CAP (no wind-up); the
+* datasheet says only that OUT swings +-1 V.
+* Input: the mixer as a current into IN1 (imix, A). Parameters: iabc (A), ic (the 2020's control current, A).
+.param vt=0.025693 iabc=10.28u ic=0 imix=0
+.param c=1n
+* stage 1
+Iin 0 in1 DC {imix} AC 1e-4
+R480 o1 in1 10k
+R475 in1 0 200
+B1 0 cap1 I=-{iabc}*tanh(v(in1)/(2*{vt}))
+C1 cap1 0 {c}
+Bl1 cap1 0 I=(v(cap1)>1 ? (v(cap1)-1)*1e-2 : (v(cap1)<-1 ? (v(cap1)+1)*1e-2 : 0))
+E1 o1 0 cap1 0 1
+* stage 2
+R483 o1 in2 10k
+R484 o2 in2 10k
+R485 in2 0 200
+B2 0 cap2 I=-{iabc}*tanh(v(in2)/(2*{vt}))
+C2 cap2 0 {c}
+Bl2 cap2 0 I=(v(cap2)>1 ? (v(cap2)-1)*1e-2 : (v(cap2)<-1 ? (v(cap2)+1)*1e-2 : 0))
+E2 o2 0 cap2 0 1
+* stage 3
+R462 o2 in3 10k
+R465 o3 in3 10k
+R464 in3 0 200
+B3 0 cap3 I=-{iabc}*tanh(v(in3)/(2*{vt}))
+C3 cap3 0 {c}
+Bl3 cap3 0 I=(v(cap3)>1 ? (v(cap3)-1)*1e-2 : (v(cap3)<-1 ? (v(cap3)+1)*1e-2 : 0))
+E3 o3 0 cap3 0 1
+* stage 4
+R466 o3 in4 10k
+R467 o4 in4 10k
+R463 in4 0 200
+B4 0 cap4 I=-{iabc}*tanh(v(in4)/(2*{vt}))
+C4 cap4 0 {c}
+Bl4 cap4 0 I=(v(cap4)>1 ? (v(cap4)-1)*1e-2 : (v(cap4)<-1 ? (v(cap4)+1)*1e-2 : 0))
+E4 o4 0 cap4 0 1
+* U479: OUT4 through R461 10k into a virtual ground, R478 200k: F = -20 OUT4, clipped at the TL082's +-13.5 V
+BF f 0 V=max(-13.5, min(13.5, -20*v(o4)))
+* C413 / R471: 15.9 Hz high-pass into both 2020s
+C413 f h 0.1u
+R471 h 0 100k
+* RES FDBK VCA: current into IN1
+Bres 0 in1 I={ic}*v(h)/14

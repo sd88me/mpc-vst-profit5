@@ -34,7 +34,7 @@ High quality runs at 2x (Profit-08's Eco/High), because sync and Poly-Mod FM ali
 | Decimator, `ma_tanh`, `ma_ota_G` | reuse |
 | Wrapper, vst.json, skin, banks page, release, test_port | Profit-08 / mpc-vst-plugins (reuse) |
 
-The new kernels live in `analog/mpc_analog_p5.h` until they move into morpho-PE's master `analog/mpc_analog.h` (then `sync.sh`).
+The new kernels were merged into morpho-PE's master `analog/mpc_analog.h` on 2026-11-24 and synced here.
 `test/test_kernels.c` checks four things. The attack reaches 1 in 10.02 ms for a 10 ms setting. The SSM 2040 self-oscillates at 991 Hz for a 1 kHz setting (0.16 semitone flat)
 and stays bounded. Bass at k = 3 is 0.25 (= 1/(1+k)). Drift std is 0.81.
 

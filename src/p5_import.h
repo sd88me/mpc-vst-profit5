@@ -1,4 +1,4 @@
-/* Patch import: u-he Repro-5 .h2p text patches (loose files or inside .zip) -> Profit-5 panel values.
+/* Patch import: u-he Repro-5 .h2p text patches and Prophet-5 Rev 4 .syx program dumps (loose files or inside .zip) -> Profit-5 panel values.
  * Pure code, no I/O, no allocation. The DEFLATE decoder and the zip walk are adapted from TinyPro5 (MIT, (c) 2026 Mathew Taylor,
  * github.com/fleshinachair/TinyPro5, src/h2p.c), itself after Mark Adler's public-domain "puff". The key table follows the same
  * file format; the mapping onto Profit-5's controls is our own (src/p5_import.c). Files are the user's own: none ship with the plugin. */
@@ -16,6 +16,11 @@ typedef struct {
 /* One patch from the text of a .h2p. Returns 1 for a Repro-5 patch with at least one recognised key, else 0 (another instrument, empty, binary). */
 int p5_import_h2p(const char *text, size_t len, p5_import_t *out);
 void p5_import_init(p5_import_t *out);          /* the neutral patch, named "Init" (an unused program slot) */
+
+/* Prophet-5 / Prophet-10 Rev 4 SysEx: calls cb(patch, user) for every program or edit-buffer dump in a .syx (any number, in file order); cb
+ * returns non-zero to stop. Other messages are skipped. Returns the number of patches delivered. */
+typedef int (*p5_syx_cb)(const p5_import_t *patch, void *user);
+int p5_import_syx(const uint8_t *data, size_t len, p5_syx_cb cb, void *user);
 
 /* Calls cb(entry name, data, len, user) for every file in a zip whose name ends in `suffix` (case-insensitive) and unpacks to at most scratch_cap bytes.
  * cb returns non-zero to stop. Returns the number of files delivered, or < 0 for a damaged / unsupported archive (encrypted, zip64). */

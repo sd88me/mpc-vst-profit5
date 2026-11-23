@@ -2,7 +2,8 @@
 """Profit-5's native MPC skin: skins/TUI.json + skins/Q-Links.json + the PNGs they use (after Welle's layout_tab).
 
 The pages are the 0.2.1 skin's own art (vst/art/, drawn by skin/make_skin.py: panel pages, 128-frame knob strips, on/off switch caps)
-with live widgets at the positions vst/layout.conf gives them (layout y = screen y + 86). Three tabs as before; Q-Links in blocks of
+with live widgets at the positions vst/layout.conf gives them (layout y = screen y + 86). Three tabs as before, then BANKS (drawn
+here: bank and program tiles, steppers, RANDOM, +FAV / -FAV); Q-Links in blocks of
 at most four per group and four groups per sub-tab, grouped by panel row so the frames do not overlap.
     python3 tools/make_tui.py [--preview]     # -> skins/  (build.sh runs it; --preview also writes build/skin-preview/*.png)"""
 import json, os, re, shutil, sys
@@ -117,11 +118,11 @@ def knob_def(strip, size):
     return key
 
 
-def readout_def(w, h):
+def readout_def(w, h, px=30.0):
     """PROGRAM: the slot name (the preset param's own text), focusable, so the data wheel and the Q-Link step the program."""
-    key = "readout_%dx%d" % (w, h)
+    key = "readout_%dx%d" % (w, h) + ("" if px == 30.0 else "_%d" % px)
     if key not in DEFS:
-        lab = label(B(0, 0, w, h), None, h=30.0, style="Bold")
+        lab = label(B(0, 0, w, h), None, h=px, style="Bold")
         lab["componentData"]["data"]["handleName"] = "Data"
         DEFS[key] = component([focus_ring(B(-4, -4, w + 8, h + 8)), lab], actions=[act("Mouse Down", "Q-Link")])
     return key
@@ -156,7 +157,7 @@ def programmer_art():
         text(cx, y, label, px)
     # PROGRAMMER: the selector, imports on the left, favourites on the right; panel-style captions and legends only
     legend(120, 1160, 168, "PROGRAM")
-    text(360, 258, "REPRO-5  .H2P / .ZIP  FROM BANKS FOLDER", 10, dim)
+    text(360, 258, "REPRO-5 .H2P  ·  REV 4 .SYX  ·  .ZIP  FROM BANKS FOLDER", 10, dim)
     legend(70, 650, 280, "IMPORTED PATCHES")
     text(1010, 258, "STORE", 10)
     text(1122, 258, "DELETE", 10)
@@ -164,7 +165,7 @@ def programmer_art():
     # ABOUT: a spec plate
     plate = [("VOICES", "5  ·  POLY / UNISON"), ("OSCILLATORS", "2 + NOISE"), ("FILTER", "4-POLE LOW-PASS"),
              ("MODULATION", "POLY-MOD  ·  WHEEL-MOD  ·  LFO"), ("REV 2", "SSM  ·  STEPPED KNOBS"),
-             ("REV 4", "CEM  ·  SMOOTH KNOBS  ·  VELOCITY / AT"), ("PROGRAMS", "1-1 TO 5-6  ·  U01-U90  ·  F01-F32")]
+             ("REV 4", "CEM  ·  SMOOTH KNOBS  ·  VELOCITY / AT"), ("PROGRAMS", "1-1 TO 5-6  ·  U01-U90  ·  F01-F32  ·  ALL ON BANKS")]
     for i, (k, v) in enumerate(plate):
         y = 372 + i * 28
         text(704, y, k, 11, anchor="lm")
@@ -239,15 +240,18 @@ QLINKS = {
         ("MOD SWITCHES", [["b_lo", "b_kbd"], ["wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b"], ["wm_filter"]]),
     ],
     "FILTER AMP": [
-        ("FILTER AMP", [["glide", "unison"], ["cutoff", "reso", "env_amt"], ["f_attack", "f_decay", "f_sustain", "f_release"],
+        ("FILTER AMP", [["glide", "voices", "unison"], ["cutoff", "reso", "env_amt"], ["f_attack", "f_decay", "f_sustain", "f_release"],
                         ["a_attack", "a_decay", "a_sustain", "a_release"]]),
-        ("TOUCH SWITCHES", [["rev", "kbd_half", "f_kbd"], ["vintage", "tune", "volume"], ["vel_filter", "vel_amp", "at_filter", "at_lfo"], ["release"]]),
+        ("TOUCH SWITCHES", [["rev", "quality", "kbd_half", "f_kbd"], ["vintage", "tune", "volume"], ["vel_filter", "vel_amp", "at_filter", "at_lfo"], ["release"]]),
     ],
     "PROGRAMMER": [
         ("PROGRAMMER", [["preset"], ["voices", "unison", "quality", "rev"]]),
     ],
+    "BANKS": [
+        ("BANKS", [["browse_bank_index"], ["bank_prog"]]),
+    ],
 }
-TAB_ORDER = ["OSCILLATORS", "FILTER AMP", "PROGRAMMER"]
+TAB_ORDER = ["OSCILLATORS", "FILTER AMP", "BANKS"]   # 3.0: BANKS replaces PROGRAMMER (its VOICES and QUALITY are on FILTER AMP)
 
 
 class Page:
@@ -309,6 +313,119 @@ def build_page(name, fn, spec):
     return p
 
 
+# ---- BANKS: the bank and program lists (src/plugin.c), like Profit-08's page in this panel's look ------------------------------
+BANK_TILES = dict(n=8, x=36, y=94, w=282, h=56, pitch=64)
+PROG_TILES = dict(n=30, rows=10, x=354, y=134, w=290, h=42, pitch_x=300, pitch_y=47)
+SAMPLE_BANKS = ["Factory 1978", "INHALT-Stack-and-Split-Programs", "P5 Factory Programs FACTORY v1.03", "P5 Factory Programs USER v1.03", "Repro-5"]
+SAMPLE_PROGS = ["1-1 Brass", "1-2 Low Strings", "1-3 Muted Clav", "1-4 Percussive Electric Piano", "1-5 Flutes", "1-6 Harpsichord", "1-7 Sync I",
+                "1-8 Percussive Organ", "2-1 Unison Glide With Resonance", "2-2 Harmonium", "2-3 Organ With Resonance", "2-4 Toy Piano", "2-5 Trumpet/Flute",
+                "2-6 Filter Mod", "2-7 Reed Organ", "2-8 Brass In Fifths", "3-1 Pipe Organ Flutes", "3-2 Sync II", "3-3 Electric Piano", "3-4 High Strings",
+                "3-5 Octave Sawteeth", "3-6 Release-Repeat", "3-7 Delayed Harmonic", "3-8 Echo-Repeat", "4-1 Pulse-Width Mod", "4-2 Slow Sync Sweep",
+                "4-3 Fourths With Resonance", "4-4 Sweeping Harmonics", "4-5 Slow Sync", "4-6 Random Arpeggiator", "4-7 Sawtooth Arpeggiator",
+                "4-8 Clangorous Bells", "5-1 Alien", "5-2 Noise Sweep", "5-3 Descending Bells", "5-4 Descending Pulse Wave Mod", "5-5 Helicopter",
+                "5-6 Resonance Bells"]
+
+
+def banks_art():
+    """BANKS's background: the panel face, the BANKS and PROGRAMS outlines with their legends, the readout windows and every tile's
+    slot (the live names and the lit tile are widgets on top)."""
+    sys.path.insert(0, os.path.join(ROOT, "skin"))
+    import make_skin as ms
+    face = ms.face(ms.W * ms.SS, ms.H * ms.SS).resize((ms.W, ms.H), Image.LANCZOS).convert("RGBA")
+    S = ms.SS
+    hi = Image.new("RGBA", (ms.W * S, ms.H * S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(hi)
+    ink, dim, slot = ms.INK + (255,), (150, 150, 144, 255), (30, 30, 33, 255)
+
+    def ff(px, bold=True):
+        free = os.path.join(ms.FONT_DIR, "FreeSansBold.ttf" if bold else "FreeSans.ttf")
+        path = free if os.path.exists(free) else os.path.join(ROOT, "skin", "fonts", "LiberationSans-Bold.ttf" if bold else "LiberationSans-Regular.ttf")
+        return ImageFont.truetype(path, int(round(px * S)))
+
+    def box(x0, y0, x1, y1, r=8, fill=None, outline=ink, w=2):
+        d.rounded_rectangle((x0 * S, y0 * S, x1 * S, y1 * S), r * S, fill=fill, outline=outline, width=w * S)
+
+    def legend_on(x0, x1, y, txt, left=None):   # a legend breaking the box's top line, like the panel's groups
+        f = ff(11)
+        tw = d.textlength(txt, font=f) / S
+        cx = left + tw / 2 if left else (x0 + x1) / 2
+        d.rectangle(((cx - tw / 2 - 8) * S, (y - 3) * S, (cx + tw / 2 + 8) * S, (y + 3) * S), fill=(0, 0, 0, 0))
+        d.text((cx * S, y * S), txt, font=f, fill=ink, anchor="mm")
+
+    for (x0, x1), cap in (((24, 524), "BANK"), ((540, 948), "PROGRAM")):   # the two readout windows between their arrows
+        box(x0 + 64, 12, x1 - 64, 62, 6, fill=slot, outline=(90, 90, 88, 255), w=1)
+        d.text(((x0 + 74) * S, 20 * S), cap, font=ff(9), fill=dim, anchor="lt")
+    box(24, 78, 330, 616)
+    box(342, 78, 1256, 616)
+    bt, pt = BANK_TILES, PROG_TILES
+    for i in range(bt["n"]):
+        y = bt["y"] + i * bt["pitch"]
+        box(bt["x"], y, bt["x"] + bt["w"], y + bt["h"], 5, fill=slot, outline=(70, 70, 68, 255), w=1)
+    for i in range(pt["n"]):
+        c, r = divmod(i, pt["rows"])
+        x, y = pt["x"] + c * pt["pitch_x"], pt["y"] + r * pt["pitch_y"]
+        box(x, y, x + pt["w"], y + pt["h"], 4, fill=slot, outline=(70, 70, 68, 255), w=1)
+    art = Image.alpha_composite(face, hi.resize((ms.W, ms.H), Image.LANCZOS))
+    # legends on the outlines, drawn after the downsample so the gap in the line is clean
+    d2 = ImageDraw.Draw(art)
+    for x0, x1, txt in ((24, 330, "BANKS"), (342, 700, "PROGRAMS")):
+        f = font(13)
+        tw = d2.textlength(txt, font=f)
+        cx = (x0 + x1) / 2 if txt == "BANKS" else x0 + 40 + tw / 2
+        d2.rectangle((cx - tw / 2 - 8, 74, cx + tw / 2 + 8, 82), fill=art.getpixel((int(cx), 70)))
+        d2.text((cx, 78), txt, font=f, fill=ms.INK, anchor="mm")
+    return save(art.convert("RGB"), "banks_native.png")
+
+
+def tile_img(w, h, lit):
+    im = Image.new("RGBA", (w + 1, h + 1), (0, 0, 0, 0))
+    if lit:   # translucent: the name Label underneath shows through (a Label on top of a Button swallows taps)
+        ImageDraw.Draw(im).rounded_rectangle([0, 0, w, h], 5, fill=(255, 46, 38, 46), outline=(255, 46, 38, 255), width=2)
+    return im
+
+
+def button(k, on, off, b, ind=None):
+    return entry(k, "Button", {"version": 2, "onImage": on, "offImage": off, "buttonId": 1, "numButtonsInGroup": 1, "handleName": "Data",
+                               "gestureBehaviour": GESTURE}, b, P(k), ind=ind)
+
+
+def build_banks(fn):
+    p = Page("BANKS", fn)
+    # steppers: BANK / PROGRAM, a named whole number between its arrows (the data wheel and the Q-Link step it)
+    for key, prev, nxt, x0, x1, sample in (("browse_bank_index", "prev_browse_bank", "next_browse_bank", 24, 524, "P5 Factory Programs FACTORY v1.03"),
+                                           ("bank_prog", "bank_prog_prev", "bank_prog_next", 540, 948, "001 It's a Prophet 5")):
+        aw, h, y = 56, 50, 12
+        p.kids.append(button(prev, save(arrow(aw, h, -1, True), "b_prev_on.png"), save(arrow(aw, h, -1, False), "b_prev_off.png"), B(x0, y, aw, h)))
+        p.kids.append(button(nxt, save(arrow(aw, h, 1, True), "b_next_on.png"), save(arrow(aw, h, 1, False), "b_next_off.png"), B(x1 - aw, y, aw, h)))
+        rw = x1 - x0 - 2 * aw - 16
+        p.add(key, (x0 - 4, y - 6, x1 + 4, y + h + 6),
+              entry(key, readout_def(rw, h - 12, 19.0), {"version": 1, "handleName": "Data"}, B(x0 + aw + 8, y + 10, rw, h - 12), P(key), focus="Yes"))
+        p.sample[key] = sample
+    for k, cap, x, w in (("random_patch", "RANDOM", 962, 104), ("fav_add", "+FAV", 1076, 86), ("fav_del", "-FAV", 1170, 86)):
+        p.kids.append(button(k, save(text_key(w, 44, cap, True), "bk_%s_on.png" % k), save(text_key(w, 44, cap, False), "bk_%s_off.png" % k), B(x, 15, w, 44)))
+    # page keys in the PROGRAMS header, right
+    for k, cap, x in (("patch_page_prev", "<", 1004), ("patch_page_next", ">", 1176)):
+        p.kids.append(button(k, save(text_key(68, 38, cap, True), "pg_%s_on.png" % k), save(text_key(68, 38, cap, False), "pg_%s_off.png" % k), B(x, 88, 68, 38)))
+    p.kids.append(label(B(1074, 88, 100, 38), P("patch_page_text"), h=19.0, colour="ffc8c8c0", style="SemiBold"))
+    p.sample["patch_page_text"] = "PAGE 1/1"
+    # tiles: a live name, and over it a transparent button lit while it is the current bank / program
+    bt, pt = BANK_TILES, PROG_TILES
+    on_b, off_b = save(tile_img(bt["w"], bt["h"], True), "tile_bank_on.png"), save(tile_img(bt["w"], bt["h"], False), "tile_bank_off.png")
+    for i in range(bt["n"]):
+        y, k = bt["y"] + i * bt["pitch"], "bank_slot_%d" % (i + 1)
+        p.kids.append(label(B(bt["x"] + 12, y, bt["w"] - 20, bt["h"]), P(k), h=20.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+        p.kids.append(button(k, on_b, off_b, B(bt["x"], y, bt["w"] + 1, bt["h"] + 1)))
+        p.sample[k] = SAMPLE_BANKS[i] if i < len(SAMPLE_BANKS) else ""
+    on_p, off_p = save(tile_img(pt["w"], pt["h"], True), "tile_prog_on.png"), save(tile_img(pt["w"], pt["h"], False), "tile_prog_off.png")
+    for i in range(pt["n"]):
+        c, r = divmod(i, pt["rows"])
+        x, y, k = pt["x"] + c * pt["pitch_x"], pt["y"] + r * pt["pitch_y"], "patch_slot_%d" % (i + 1)
+        p.kids.append(label(B(x + 10, y, pt["w"] - 16, pt["h"]), P(k), h=19.0, colour="ffeaeae4", style="SemiBold", just="left verticallyCentred"))
+        p.kids.append(button(k, on_p, off_p, B(x, y, pt["w"] + 1, pt["h"] + 1)))
+        p.sample[k] = SAMPLE_PROGS[i] if i < len(SAMPLE_PROGS) else ""
+    return p
+
+
 KB_ROWS = [("1234567890", ["kb_bksp"]), ("QWERTYUIOP", []), ("ASDFGHJKL-", []), ("ZXCVBNM", ["kb_space"])]
 
 
@@ -320,6 +437,8 @@ def keyboard(p):
     d.rounded_rectangle((42, 14, 1238, 614), 10, outline=(234, 234, 228), width=2)
     d.text((76, 52), "FAVOURITE NAME", font=font(20), fill=(234, 234, 228), anchor="lm")
     d.rounded_rectangle((300, 26, 1210, 80), 6, fill=(34, 34, 37), outline=(255, 46, 38), width=2)
+    max_chars = int(re.search(r"kFavNameMax = (\d+)", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../src/params_gen.h")).read()).group(1))   # the limit the plugin enforces
+    d.text((1196, 53), "MAX %d CHARACTERS" % max_chars, font=font(16), fill=(150, 150, 146), anchor="rm")
     p.kids.append(entry("kb panel", "Image", {"version": 2, "imageType": "Regular", "colour": "0", "image": save(panel, "kb_panel.png")},
                         "0 0 1280 628", ind=ind))
     p.kids.append(label(B(316, 26, 880, 54), P("fav_name"), h=32.0, style="Bold", just="left verticallyCentred"))
@@ -405,8 +524,10 @@ def render_preview(p, bgname, rects_by_sub):
                 img.alpha_composite(pic, (x, y))
             elif typ.startswith("readout_") or typ == "Label":
                 txt = "Lead 2_" if key == "fav_name" else p.sample.get(key, "")
-                left = "left" in k["componentData"]["data"].get("textStyle", {}).get("justification", "")
-                d.text((x if left else x + w / 2, y + h / 2), txt, font=font(22 if typ == "Label" else 30), fill=(234, 234, 228), anchor="lm" if left else "mm")
+                ts = k["componentData"]["data"].get("textStyle") or DEFS.get(typ, {}).get("componentsData", [{}, {}])[1].get("componentData", {}).get("data", {}).get("textStyle", {})
+                left = "left" in ts.get("justification", "")
+                px = int(ts.get("font", {}).get("height", 22 if typ == "Label" else 30))
+                d.text((x if left else x + w / 2, y + h / 2), txt, font=font(px), fill=(234, 234, 228), anchor="lm" if left else "mm")
         for r in ([] if os.environ.get("P5_PREVIEW_CLEAN") else rects):   # P5_PREVIEW_CLEAN=1: no Q-Link frames (README pictures)
             d.rectangle(r, outline=(255, 46, 38), width=2)
         outs.append((subname, img))
@@ -423,11 +544,15 @@ def main():
     if preview:
         os.makedirs(PREVIEW, exist_ok=True)
     for fn, name in enumerate(TAB_ORDER):
-        spec = spec_all[name]
-        bgname = programmer_art() if name == "PROGRAMMER" else copy_art(spec["art"])
-        p = build_page(name, fn, spec)
-        if name == "PROGRAMMER":
-            keyboard(p)
+        if name == "BANKS":
+            bgname, p = banks_art(), build_banks(fn)
+            keyboard(p)   # +FAV opens it over this page too
+        else:
+            spec = spec_all[name]
+            bgname = programmer_art() if name == "PROGRAMMER" else copy_art(spec["art"])
+            p = build_page(name, fn, spec)
+            if name == "PROGRAMMER":
+                keyboard(p)
         t, q = tabs_for(p, bgname)
         tabs += t
         qmaps += q

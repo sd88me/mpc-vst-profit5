@@ -1,6 +1,6 @@
 // Profit-5 for MPC / Force: the native front end (framework/mpc_plugin.h) around the unchanged Profit-5 engine
 // (src/engine.c + src/p5_import.c + src/plugin.c's string-key mpc_engine(), via engine_unit.cpp: five voices, Rev 2 / Rev 4, the
-// 38 factory programs, Repro-5 .h2p patches imported from <plugin folder>/banks).
+// 38 factory programs, Repro-5 .h2p patches and Prophet-5 Rev 4 .syx banks imported from <plugin folder>/banks).
 //
 // Signal flow: host MIDI (sample accurate) -> engine midi -> engine render (int16 stereo, up to 128 frames) -> float outputs.
 //
@@ -45,6 +45,13 @@
 #include <thread>
 #include <vector>
 
+#ifndef P5_DEFAULT_QUALITY   // as src/p5_engine.h: High on Gen2 (aarch64), Eco on Gen1 (armv7)
+#if defined(__arm__) && !defined(__aarch64__)
+#define P5_DEFAULT_QUALITY 0
+#else
+#define P5_DEFAULT_QUALITY 1
+#endif
+#endif
 #ifndef P5_NAME
 #define P5_NAME "Profit-5"
 #endif
@@ -53,7 +60,7 @@
 #endif
 #define P5_FOURCC(...) MPC_FOURCC(__VA_ARGS__)   // expands P5_UID before MPC_FOURCC counts its arguments
 #ifndef P5_VERSION
-#define P5_VERSION 2000
+#define P5_VERSION 3000
 #endif
 
 namespace {
@@ -99,7 +106,8 @@ public:
     {
         for (int i = 0; i < kNumParams; ++i)
         {
-            const PSpec& s = g_pspecs[i];
+            PSpec s = g_pspecs[i];
+            if (!std::strcmp(s.key, "quality")) s.def = P5_DEFAULT_QUALITY;   // High on Gen2, Eco on Gen1 (src/p5_engine.h)
             mpc::Param p = (s.flags & kChoice) ? mpc::choiceParam(s.key, s.name, std::vector<std::string>(s.choices, s.choices + s.nchoices), (int)s.def)
                          : (s.flags & kFloat)  ? mpc::floatParam(s.key, s.name, s.min, s.max, s.def, "", 2)
                                                : mpc::intParam(s.key, s.name, (int)s.min, (int)s.max, (int)s.def);
@@ -127,7 +135,7 @@ public:
         pthread_mutex_init(&lock_, &ma);
         pthread_mutexattr_destroy(&ma);
 
-        // The engine scans the folder it is given for .h2p / .zip patches. 1.x gave it <plugin folder>/banks (MODULE_SUBDIR "banks"):
+        // The engine scans the folder it is given for .h2p / .syx / .zip patches. 1.x gave it <plugin folder>/banks (MODULE_SUBDIR "banks"):
         // keep that, so imported patches and the projects that picked them stay where they were.
         // (Not mpc::contentPath(): a function-local static std::string segfaults at dlclose.)
         const std::string folder = mpc::detail::computePluginFolder();
@@ -202,14 +210,15 @@ public:
         if (s.flags & kLocal) { localChanged(index, plain); return; }
         hostAt_[index].store(nowMs());
         if (loading_.load()) return;             // an MPC chunk is restoring values: the engine state follows as extra state
-        if (s.flags & kText) return;             // a readout's counter: nothing to send
+        if ((s.flags & kText) && !(s.flags & kTile)) return;   // a readout's counter: nothing to send   // a readout's counter: nothing to send
         if (s.flags & kMomentary)
         {
-            if (plain < 0.5f) { held_[index].store(false); return; }
+            if (plain < 0.5f) { held_[index].store(false); if (s.flags & kTile) hostMoved_[index].store(true); return; }
             if (held_[index].exchange(true)) return;
             if (s.flags & kStep) stepTarget(index);
             else engineSet(s.key, "1");
-            release_[index].store(true);
+            if (s.flags & kTile) hostMoved_[index].store(true);   // a BANKS tile shows "<key>_on", read back by the worker
+            else release_[index].store(true);
             return;
         }
         char buf[32];
@@ -227,7 +236,7 @@ public:
             float steps = settle(pos, cur, lastPos_[(size_t)index]);
             // The data wheel on the PROGRAM readout moves the host value by more than one step per click on a long range: a small
             // off-step move there is one step in its direction (a drag or Q-Link still lands where it points).
-            if ((s.flags & kPreset) && std::fabs(pos - std::round(pos)) > 0.001f && std::fabs(pos - cur) < 3.0f && pos != cur)
+            if ((s.flags & (kPreset | kNamed)) && std::fabs(pos - std::round(pos)) > 0.001f && std::fabs(pos - cur) < 3.0f && pos != cur)
                 steps = cur + (pos > cur ? 1.0f : -1.0f);
             lastPos_[(size_t)index] = pos;
             steps = std::min(std::max(steps, 0.0f), span);
@@ -254,6 +263,13 @@ public:
         if (index == kFavName) { std::lock_guard<std::mutex> g(favMu_); out = kbName_ + "_"; return true; }
         if (s.flags & kText) { out = engineGet(s.key, buf, sizeof buf) ? buf : ""; return true; }
         if (s.flags & kMomentary) { out = ""; return true; }
+        if (s.flags & kNamed)   // BANK / PROGRAM on BANKS: the bank's or program's name
+        {
+            char k[64];
+            std::snprintf(k, sizeof k, "%s_text", s.key);
+            out = engineGet(k, buf, sizeof buf) ? buf : "";
+            return true;
+        }
         if (s.flags & kFloat) { std::snprintf(buf, sizeof buf, "%.1f", plain); out = buf; return true; }   // 0.0 .. 10.0, as the panel
         if (s.flags & kPreset)   // the slot's name, as the PRESET menu shows it
         {
@@ -423,11 +439,30 @@ private:
             if (r != lastRev_) { lastRev_ = r; full = true; }
         }
         int changed = 0;
-        for (int i = 0; i < kNumEngineParams; ++i)
+        for (int i = 0; i < kNumParams; ++i)
         {
             const PSpec& s = g_pspecs[i];
+            if (s.flags & kLocal) continue;
             const bool moved = hostMoved_[i].exchange(false);
-            if (!(moved || full) || !(s.flags & kPolled)) continue;
+            if ((s.flags & kTile) && (moved || full || tick_ % 10 == 0))   // lit = the engine's "<key>_on"
+            {
+                // compared with the host's own value, not only the last one sent: a tile the host left lit (its own press, a missed
+                // update) is put out within ~100 ms, so only the current program's tile stays lit
+                char k2[64];
+                std::snprintf(k2, sizeof k2, "%s_on", s.key);
+                const float on = engineGet(k2, buf, sizeof buf) && std::atoi(buf) ? 1.0f : 0.0f;
+                const bool shown = getNormalised(i) > 0.5f;
+                if (moved || on != told_[i] || (on > 0.5f) != shown)
+                {
+                    pushValue(i, on);
+                    held_[i].store(false);   // the host now shows our value: the next press is a new tap even if no release came
+                    if (!moved) ++changed;
+                }
+                continue;
+            }
+            if (!(moved || full)) continue;
+            if (s.flags & kTile) continue;
+            if (!(s.flags & kPolled)) continue;
             if (i == 0 && pend0At_.load()) { if (moved) hostMoved_[0].store(true); continue; }
             // while the host is still moving it, don't send the engine's value back under the finger; read it back once it has rested
             const long long at = hostAt_[i].load();
@@ -463,14 +498,17 @@ private:
         // text readouts: every 100 ms; a changed text bumps the counter (the host re-reads text when the value moves)
         bool textChanged = false;
         if (force || full || tick_ % 10 == 0)
-            for (int i = 0; i < kNumEngineParams; ++i)
+            for (int i = 0; i < kNumParams; ++i)
             {
                 const PSpec& s = g_pspecs[i];
-                if (!(s.flags & kText)) continue;
-                const uint32_t h = engineGet(s.key, buf, sizeof buf) ? fnv(buf) | 1u : 1u;
+                if (!(s.flags & (kText | kNamed)) || (s.flags & kLocal)) continue;
+                char tk[64];
+                std::snprintf(tk, sizeof tk, (s.flags & kNamed) ? "%s_text" : "%s", s.key);
+                const uint32_t h = engineGet(tk, buf, sizeof buf) ? fnv(buf) | 1u : 1u;
                 if (h == textHash_[(size_t)i]) continue;
                 textHash_[(size_t)i] = h;
                 textChanged = true;
+                if (s.flags & (kTile | kNamed)) continue;   // a tile's value is its lit state, a named number's its index: the new text shows with the display update
                 counter_ = (counter_ + 1) % 1024;
                 pushValue(i, (float)counter_);
             }
