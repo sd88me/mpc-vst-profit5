@@ -309,7 +309,7 @@ class Tab:
         d.rounded_rectangle((S(7), S(7), W - S(8), H - S(8)), radius=S(5), outline=(120, 122, 128, 255), width=S(1))
         d.rounded_rectangle((S(8), S(8), W - S(7), H - S(7)), radius=S(5), outline=(250, 250, 252, 160), width=S(1))
         # screws
-        for sx in (S(16), W - S(16)):
+        for sx in (S(13), W - S(13)):
             sy = H // 2
             sr = S(7)
             d.ellipse((sx - sr, sy - sr, sx + sr, sy + sr), fill=(150, 152, 158, 255), outline=(60, 62, 66, 255), width=S(1))
@@ -317,7 +317,7 @@ class Tab:
             d.line((sx - S(4.5), sy + S(1.5), sx + S(4.5), sy - S(1.5)), fill=(40, 40, 44, 255), width=S(1.6))
         # engraved lettering: dark ink, a light lip below-right and a shadow above-left
         try:
-            f = ImageFont.truetype(PLAQUE_FONT, S(45 * w / 250))
+            f = ImageFont.truetype(PLAQUE_FONT, S(45 * w / 250 * 0.76))
             try:
                 f.set_variation_by_axes([850])
             except Exception:
