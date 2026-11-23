@@ -20,6 +20,15 @@
 /* model 1, Rev 4 (3320) filter trims (Rev 3 manual 4-20: cutoff CV 2.000 V, A3 rings at 440 Hz and A4 at 880 Hz); tools/service_trim.py */
 #define CUT4_TRIM 0.07067f
 #define CUT4_KV 0.99833f
+/* model 1, Rev 4 (ESTIMATES, checked against a black-box render of GForce's Prophet 5, filter "3", 2026-11-23): the RES CV's resistor into the
+ * Q VCA (the Rev 3 schematic's 200k put self-oscillation at RES 6; GForce has it at 6.5-7) and the Q compensation's exponent (0.68 restored
+ * most of the bass; GForce loses about 5 dB at RES 5 with its Q comp on or off) */
+#ifndef RES4_R
+#define RES4_R 225e3f
+#endif
+#ifndef QCOMP4_EXP
+#define QCOMP4_EXP 0.30f
+#endif
 /* model 1, Rev 4: one osc at 10 puts 0.25 x I_ref (63 uA) into stage 1 (ASSUMED: the Rev 3 CA3280 and Rev 4 SSI2164 mixer gains are not
  * read); x 90.9k gives the kernel's volts. Output: U475 to the engine's level, one saw at mix 10 through an open filter as loud as 2.0.0 */
 #define VCF3_IN (0.25f * 63e-6f * 90.9e3f)
@@ -311,8 +320,8 @@ void p5_render(p5_engine_t *e, float *out, int n) {
             }
             int ctl = (e->ctl++ & CTL_MASK) == 0;
             if (c4 && ctl) {   /* Rev 4 Q compensation (ESTIMATE, below): k = 90.9k x gm(I_cr) x 0.0311 x 3.4, gm the 3320 sheet's Fig. 6 */
-                float icr = 10 * c[1] / 200e3f;
-                e->qcomp4 = powf(1 + 9611 * 2.24e-3f * icr / (icr + 122.5e-6f), 0.68f);
+                float icr = 10 * c[1] / RES4_R;
+                e->qcomp4 = powf(1 + 9611 * 2.24e-3f * icr / (icr + 122.5e-6f), QCOMP4_EXP);
             }
             if (cm && ctl) {   /* model 1: the 2020s' control currents (mixer 39k, resonance 30k), at the control rate */
                 for (int k = 0; k < 3; k++) e->vca[k] = ma_2020_ctl(10 * c[3 + k], 39e3f) * (39e3f * 0.02906f);
@@ -426,7 +435,7 @@ void p5_render(p5_engine_t *e, float *out, int n) {
                 if (c4) {
                     /* model 1, Rev 4: the Rev 3 filter section (ma_vcf3320; docs/CIRCUIT.md "Rev 3 filter"). Q VCA control: RES CV / 200k */
                     float xin = VCF3_IN * (c[3] * oa + c[4] * ob + c[5] * white * 0.8f) + 1e-5f * rnd(&e->rng);
-                    float h = ma_vcf3320(&x->vcf3, ftan(3.14159265f * hz * inv), e->hp1, 10 * c[1] / 200e3f, xin, e->kc3, &e->diag_unconv);
+                    float h = ma_vcf3320(&x->vcf3, ftan(3.14159265f * hz * inv), e->hp1, 10 * c[1] / RES4_R, xin, e->kc3, &e->diag_unconv);
                     if (!(h == h) || fabsf(h) > 20) { memset(&x->vcf3, 0, sizeof x->vcf3); e->diag_nan++; h = 0; }
                     /* ESTIMATE: the reissue's Q compensation (maffez.com: an SSI2164 cell on the Q CV adds level at the 3320's output; R274
                      * 16.2k, "more" at 10-12k) restores 0.68 (11 / 16.2) of the passband's loss in dB: (1 + k)^0.68, k the loop gain.
