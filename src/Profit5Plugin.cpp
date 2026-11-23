@@ -45,6 +45,13 @@
 #include <thread>
 #include <vector>
 
+#ifndef P5_DEFAULT_QUALITY   // as src/p5_engine.h: High on Gen2 (aarch64), Eco on Gen1 (armv7)
+#if defined(__arm__) && !defined(__aarch64__)
+#define P5_DEFAULT_QUALITY 0
+#else
+#define P5_DEFAULT_QUALITY 1
+#endif
+#endif
 #ifndef P5_NAME
 #define P5_NAME "Profit-5"
 #endif
@@ -53,7 +60,7 @@
 #endif
 #define P5_FOURCC(...) MPC_FOURCC(__VA_ARGS__)   // expands P5_UID before MPC_FOURCC counts its arguments
 #ifndef P5_VERSION
-#define P5_VERSION 2000
+#define P5_VERSION 3000
 #endif
 
 namespace {
@@ -99,7 +106,8 @@ public:
     {
         for (int i = 0; i < kNumParams; ++i)
         {
-            const PSpec& s = g_pspecs[i];
+            PSpec s = g_pspecs[i];
+            if (!std::strcmp(s.key, "quality")) s.def = P5_DEFAULT_QUALITY;   // High on Gen2, Eco on Gen1 (src/p5_engine.h)
             mpc::Param p = (s.flags & kChoice) ? mpc::choiceParam(s.key, s.name, std::vector<std::string>(s.choices, s.choices + s.nchoices), (int)s.def)
                          : (s.flags & kFloat)  ? mpc::floatParam(s.key, s.name, s.min, s.max, s.def, "", 2)
                                                : mpc::intParam(s.key, s.name, (int)s.min, (int)s.max, (int)s.def);

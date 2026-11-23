@@ -12,6 +12,22 @@ smooth controls, velocity and aftertouch).
 |---|---|
 | ![Filter and amplifier](docs/img/screenshot-filter.png) | ![Programmer: programs, imports and favourites](docs/img/screenshot-program.png) |
 
+## New in 3.0
+- **Circuit-modelled voice.** The Rev 2 voice was rebuilt from its schematics and service manual, following the
+  [Lemus](https://github.com/lemus-dev/lemus) method: each section transcribed, simulated in ngspice and checked against it, then trimmed to the
+  service manual's own calibration steps. That covers the SSM 2040 filter as a solved four-stage circuit, the 2020 VCAs' control law, the oscillator
+  output networks, Poly-Mod, the Wheel-Mod bus, the envelopes and glide (unison only, as on the instrument). Rev 4 gets the CEM 3320 filter from its
+  datasheet, trimmed to the reissue's procedure. Where no data exists, the value is an estimate and is marked as one in
+  [`docs/improvements.md`](docs/improvements.md).
+- **Old projects keep their sound.** A project saved with 2.0 or earlier plays with the 2.0 engine. New instances and the programs use the circuit model.
+- **BANKS page:** every program of every bank, with no 90-program limit (see below). It also has RANDOM, +FAV and -FAV.
+- **Prophet-5 / Prophet-10 Rev 4 SysEx banks** (`.syx`, loose or in zips) import alongside Repro-5 patches.
+- **Quality defaults to High on Gen2** (MPC Live III and other 64-bit MPCs) and to **Eco on Gen1** (Force and 32-bit MPCs), where High costs a
+  lot more CPU. Change it on the Programmer page; it's saved with the project.
+- CPU at High: about 11 % on a Live III. On a Force, about 36 % at High and 18 % at Eco (device benches, 2026-11).
+
+![The BANKS page](docs/img/skin-banks.png)
+
 ## New in 2.0
 - **Native MPC screen:** the three panel pages (Oscillators, Filter Amp, Programmer), redrawn with the mixer next to the oscillators and Glide and Unison
   on the filter page. Knobs, switches and LEDs are live on the panel.
@@ -21,9 +37,9 @@ smooth controls, velocity and aftertouch).
 - **Programmer page:** the program name takes the data wheel and a Q-Link, with step keys either side.
 - One zip carries the 32-bit (Force) and 64-bit builds. Projects saved with 0.1.x and 0.2.x load with their sound, and imported Repro-5 patches stay where they were.
 
-**Status: 2.0.0.** Tested on a Live III (all pages, Q-Links, programs, favourites and naming, sound). Not yet tested: the Force with this version, a real
-project saved with 0.2.1 (old project data is covered by the offline tests), and saving and reloading a 2.0 project on the device. Many knob response
-laws are still measured guesses (see "What is measured, and what isn't"): expect the character, not a calibrated copy.
+**Status: 3.0.0.** The circuit model and `.syx` import were played on a Live III and a Force during development. The BANKS page was tested
+offline and on a Live III beta. The LFO, the Rev 4 oscillators and envelopes, and a few levels have no circuit data and keep 2.0's laws or a marked
+estimate (see "What is measured, and what isn't"): expect the character, not a calibrated copy.
 
 ![Naming a favourite](docs/img/screenshot-keyboard.png)
 
@@ -49,7 +65,7 @@ keys. **RANDOM** loads a random imported program; **+FAV** (with the naming keyb
 Programs beyond the 90 PRESET slots play from BANKS and keep their name in your project.
 
 ### Every program, in folders (MPC preset files)
-The program list holds 90 imports. To reach every program of every bank, make MPC preset files: one folder per bank, which the MPC's
+The PRESET menu holds 90 imports, and the BANKS page shows them all. You can also make MPC preset files for every program: one folder per bank, which the MPC's
 preset browser shows as a layer (for example *Factory 1978*, then the bank's programs):
 
 ```
@@ -67,15 +83,15 @@ What does not: the wheel's upper limit (Profit-5's wheel always reaches full dep
 anything Repro-5 has that this panel does not. The LFO rate is taken dial for dial, so its speed can differ. The conversion is by dial position,
 so it sounds like the patch's idea of the sound, not a copy; it follows the same file format
 reading as [TinyPro5](https://github.com/fleshinachair/TinyPro5) (MIT), whose DEFLATE and zip code it adapts. Master tune, volume, voices
-and quality stay as you set them. `.syx` dumps are not read yet.
+and quality stay as you set them. A Rev 4 `.syx` is read in full: every knob, switch, the name, Rev 2 / Rev 4, and unison.
 
 ## Install
 
 - **Plugin Manager:** install or update **Profit-5** from the catalog in the Open MPC Plugin Manager.
 - **By hand** (a modded MPC OS device with SSH access; unofficial, back up first and use at your own risk): download the zip for your device from the
   [releases](https://github.com/sd88me/mpc-vst-profit5/releases), `-mpc-armv7.zip` for the Force and 32-bit MPCs or `-mpc-aarch64.zip` for 64-bit MPCs
-  such as the Live III. Unzip it, copy the folder to the device (`scp -r Profit-5-2.0.0 root@<device-ip>:/tmp/`) and run
-  `ssh root@<device-ip> sh /tmp/Profit-5-2.0.0/install.sh`. Save your project first: the installer stops and restarts MPC. `INSTALL.txt` in the zip has the details.
+  such as the Live III. Unzip it, copy the folder to the device (`scp -r Profit-5-3.0.0 root@<device-ip>:/tmp/`) and run
+  `ssh root@<device-ip> sh /tmp/Profit-5-3.0.0/install.sh`. Save your project first: the installer stops and restarts MPC. `INSTALL.txt` in the zip has the details.
 
 Then add **Profit-5** to a track from the plugin browser. Upgrading keeps your `banks` folder and favourites; old projects keep their sound.
 
@@ -90,7 +106,7 @@ Then add **Profit-5** to a track from the plugin browser. Upgrading keeps your `
 - **Filter and amplifier:** cutoff, resonance, envelope amount, keyboard tracking, and a four-stage ADSR for each.
 - **Glide** and **master tune**, pitch bend, mod wheel, sustain pedal and program change.
 - **38 factory programs** (banks 1-4 and 5-1 to 5-6 of the original set), in MPC's PRESET menu and on the Program knob.
-- **Three screen pages** with real-panel layout, printed 0-10 scales and 128-step knob pictures, six Q-Link sub-tabs, and favourites in the PRESET menu.
+- **Four screen pages** (three panel pages plus BANKS) with real-panel layout, printed 0-10 scales and 128-step knob pictures, six Q-Link sub-tabs, and favourites in the PRESET menu.
 
 ### Rev 2 and Rev 4
 
@@ -104,7 +120,7 @@ One switch, `REV`, changes everything that differs between the two voicings:
 | Knobs | **121 steps**, like the 7-bit control path of the instrument | smooth |
 | Velocity, aftertouch | none (the original has neither) | velocity to filter and level; aftertouch to cutoff and LFO depth |
 
-**Vintage** scales the drift and part-to-part spread in both. **Eco / High** picks 1x or 2x oversampling.
+**Vintage** scales the drift and part-to-part spread in both. **Eco / High** picks 1x or 2x oversampling (default: High on Gen2, Eco on Gen1).
 The skin has two looks, the 1978 panel's naming and light walnut (the default build) and the reissue's naming and darker walnut; they change
 only the picture, not the sound.
 
@@ -142,7 +158,11 @@ chips themselves are behavioural, fitted to their datasheets.
 
 ## What is measured, and what isn't
 
-Honest status, offline on x86 (2026-10-21):
+Circuit model (3.0, 2026-11): the filter kernels match ngspice (`tools/vcf_compare.c`, `tools/vcf3320_compare.c`), `tools/spice_check.py` passes
+28 checks, and `tools/service_check.c` reproduces the service manuals' calibration points. Every change since 2.0 is listed, with what it is based on and
+what is still an estimate, in [`docs/improvements.md`](docs/improvements.md). The 2.0 measurements below still describe the 2.0 engine, which old projects use.
+
+Honest status of 2.0, offline on x86 (2026-10-21):
 - **Measured and tested:** a 440 Hz note plays within 0.6 cent; an 8.4 kHz note is 1.8 cents flat in Rev 2; self-oscillation at cutoff 6 rings at 432 Hz;
   bass at resonance 7 is half of Rev 4's in Rev 2; glide is a constant rate; all 38 programs render with no NaN and no clipping, in both revisions and
   both qualities; the voice allocator behaves as in the firmware.
@@ -161,6 +181,7 @@ What's next is in [`docs/HANDOFF.md`](docs/HANDOFF.md). All of this is written u
 | **Oscillators** | Poly-Mod (filter envelope, osc 2, three destinations), LFO (initial amount, frequency, three shapes), Wheel-Mod (source mix, five destinations), oscillator 1 and 2, mixer |
 | **Filter Amp** | Glide and unison, filter (cutoff, resonance, envelope amount, keyboard tracking, half/full, ADSR), amplifier ADSR and release, vintage, master tune, volume, velocity and aftertouch depths |
 | **Programmer** | Program name with step keys and the data wheel, imported-patch count, +FAV / -FAV with the naming keyboard, voices, unison, quality, rev |
+| **Banks** | Bank and program steppers (data wheel, Q-Links), bank list, programs 45 to a page, RANDOM, +FAV / -FAV |
 
 MIDI: notes with velocity, polyphonic and channel aftertouch, pitch bend (two semitones), CC 1 mod wheel, CC 64 sustain, CC 120 / 123 all off, program change.
 

@@ -1,6 +1,14 @@
 /* Profit-5 engine: five-voice analog model of the early SSM-chip instrument, with a Rev 2 / Rev 4 voicing switch.
  * Plain C, no allocation after p5_init, no I/O, no locks. Parameters are 0..1 (VST convention); switches are on above 0.5. */
 #pragma once
+/* Quality's default: High (2x) on Gen2 (aarch64) and on desktop test builds, Eco (1x) on Gen1 (armv7: the Force runs near 36 % at High) */
+#ifndef P5_DEFAULT_QUALITY
+#if defined(__arm__) && !defined(__aarch64__)
+#define P5_DEFAULT_QUALITY 0
+#else
+#define P5_DEFAULT_QUALITY 1
+#endif
+#endif
 #include <stdint.h>
 #include "../analog/mpc_analog.h"
 #include "../analog/mpc_analog_p5.h"

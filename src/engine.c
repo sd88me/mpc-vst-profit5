@@ -131,7 +131,7 @@ void p5_init(p5_engine_t *e, float fs) {
     e->p[P5P_TUNE] = 0.5f;
     e->p[P5P_VOLUME] = 0.8f;
     e->p[P5P_NVOICES] = 1.0f;
-    e->p[P5P_QUALITY] = 1.0f;
+    e->p[P5P_QUALITY] = P5_DEFAULT_QUALITY ? 1.0f : 0.0f;
     e->p[P5P_RELEASE] = 1.0f;
     e->model = P5_MODEL_LATEST;
     e->qcomp4 = 1;

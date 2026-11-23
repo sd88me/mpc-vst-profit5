@@ -28,7 +28,7 @@ PY
   python3 "$MPC_VST/tools/release.py" --so "$st/profit_5.so" --skin "$st/$DIR" --entry "$st/entry.xml" --version "$VER" \
     --user-data banks --user-data profit5-favourites.dat \
     --repo sd88me/mpc-vst-profit5 --license MIT --id profit-5 \
-    --about "Five-voice analog polysynth modelled on an early SSM-chip Prophet-5: Rev 2 / Rev 4 voicing, 38 factory programs, Repro-5 .h2p import, named favourites; native MPC screen and Q-Links." \
+    --about "Five-voice analog polysynth modelled on an early SSM-chip Prophet-5, circuit-modelled from its schematics: Rev 2 / Rev 4 voicing, 38 factory programs, Repro-5 .h2p and Rev 4 .syx import, a BANKS page for every program, named favourites; native MPC screen and Q-Links." \
     -o "$st/dist"
   z=$(ls "$st/dist"/*.zip)
   # Public text: the installer template names an unreleased OS version in one comment; reword it and refresh SHA256SUMS

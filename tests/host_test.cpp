@@ -121,7 +121,7 @@ int main(int argc, char** argv)
     CHECK(a->uniqueID == (VstInt32)P5_EXPECT_UID, "uid %08x", (unsigned)a->uniqueID);
     CHECK(!std::strcmp(name, P5_EXPECT_NAME), "name \"%s\"", name);
     CHECK(a->numParams == 176, "176 params: the 64 of 0.2.1 + favourites and keyboard + BANKS (%d)", a->numParams);
-    CHECK(a->dispatcher(a, effGetVendorVersion, 0, 0, nullptr, 0) == 2000, "version 2000");
+    CHECK(a->dispatcher(a, effGetVendorVersion, 0, 0, nullptr, 0) == 3000, "version 3000");
     {
         int bad = 0, i = 0;
         std::ifstream f("vst/params.lock");
