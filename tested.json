@@ -9,4 +9,7 @@
   { "version": "3.0.0", "device": "Akai MPC Live III (Gen2)", "firmware": "3.10", "date": "2026-11-24",
     "note": "BANKS page, Rev 2 / Rev 4 circuit models (high quality default on Gen2), upload rules; installed and listened to on the unit. Not yet run on a Force / Gen1 (Eco default)." },
   { "version": "3.0.1", "device": "Akai MPC Live III (Gen2)", "firmware": "3.10", "date": "2026-11-24",
-    "note": "MOD WHEEL widget and Q-Link, nameplate; installed from the release zip and looked at on the unit. Not yet run on a Force / Gen1 (Eco default)." } ]
+    "note": "MOD WHEEL widget and Q-Link, nameplate; installed from the release zip and looked at on the unit. Not yet run on a Force / Gen1 (Eco default)." },
+  {"version": "3.0.2", "device": "Akai MPC Live III (Gen2)", "firmware": "3.10", "date": "2026-11-24",
+    "note": "Release zip installed on the unit from the draft release; loads, skin and sound checked. Not yet run on a Force / Gen1."}
+]
