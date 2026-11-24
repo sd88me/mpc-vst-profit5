@@ -6,7 +6,7 @@ settle gets listed as "waits on data" rather than guessed.
 
 The method is from [Lemus](https://github.com/lemus-dev/lemus) (`CONTRIBUTING.md`, and e.g. `machines/sh101/docs/improvements.md`):
 schematic-first circuit models, a check set run before and after every round, per-event measurements in absolute units, and one
-public tracker of what is wrong. **Method only, no code:** Lemus is AGPL-3.0 and Profit-5 is MIT, so nothing is copied from it.
+public tracker of what is wrong. **Method only, no code:** Lemus is AGPL-3.0 and Profit-5 is GPL-3.0-or-later (a different licence), so nothing is copied from it.
 
 ## Needs
 - The Rev 1 service manual, the schematic scans and the SSM 2030/2040/2050/2020 datasheets, locally (they stay out of the repo by

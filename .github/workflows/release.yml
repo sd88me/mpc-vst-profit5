@@ -16,17 +16,17 @@ on:
 
 jobs:
   vst:
-    uses: sd88me/mpc-vst-plugins/.github/workflows/vst-release.yml@3783efc00898e3f5091934b7169f457bb9be2656
+    uses: open-mpc/mpc-vst-plugins/.github/workflows/vst-release.yml@1777e405a4c15c380f7a1b1adf673dd73c1a0585
     permissions: { contents: write }
     with:
       tag: profit-5-vst-v${{ inputs.version }}
       version: ${{ inputs.version }}
-      tools_ref: 3783efc00898e3f5091934b7169f457bb9be2656
+      tools_ref: 1777e405a4c15c380f7a1b1adf673dd73c1a0585
       vst_dir: vst
       build: vst/build.sh
       host_test: '"$MPC_VST/tools/test_port.sh" vst/vst.json'
       about: "Five-voice analog polysynth modelled on an early SSM-chip Prophet-5: Rev 2 / Rev 4 voicing, 38 factory programs, and it imports Repro-5 .h2p patches."
       user_data: banks
       plugin_id: profit-5
-      license: MIT
+      license: GPL-3.0-or-later
       dry_run: ${{ inputs.dry_run }}
