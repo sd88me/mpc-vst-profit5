@@ -52,7 +52,7 @@ and stays bounded. Bass at k = 3 is 0.25 (= 1/(1+k)). Drift std is 0.81.
 
 ## Other circuit-modelling projects (2026-10-21)
 [idlefoundry/ca-72](https://github.com/idlefoundry/ca-72) (a Minimoog model) and its [plugin-kit](https://github.com/idlefoundry/plugin-kit) are **GPL-3.0**.
-None of their code can go into this MIT repo or `mpc_analog.h` (which is written without GPL code). They are useful as method:
+None of their code is copied into this repo or `mpc_analog.h` (which is written from the papers, without third-party GPL code). They are useful as method:
 - Transcribe each board into a SPICE netlist, simulate it in ngspice, and test the real-time model against the simulation (pitch, resonance, envelope shapes).
 - Measure renders the same way every time (loudness, peaks, pitch tracks, A/B comparison).
 

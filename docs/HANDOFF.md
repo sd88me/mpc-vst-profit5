@@ -50,7 +50,7 @@ See also `docs/ROADMAP-accuracy.md`: what can be derived without a recording (th
 - **PRs #486-#489** (wrapper: no UpdateDisplay on a host write, a 50 ms UpdateDisplay limit, `params.lock`, wrapper-limits docs) are open. Profit-5 was built and host-tested against all four,
   but the release workflow is pinned to `main` `c121b12`, which lacks them. After they merge: bump the sha in `.github/workflows/release.yml` (both places), re-run.
 - **`panel-skin` skill:** pushed to mpc-vst-plugins branch `claude/optimistic-pascal-xbed8c` (one commit on `main`), no PR yet. Open one when ready; its docs change (`docs/COMMUNITY_SKINS.md`, `CLAUDE.md`) is in the same commit.
-- **Catalog:** `release.py` ran with `--repo sd88me/mpc-vst-profit5 --license MIT --id profit-5` and `catalog_check.py --catalog` passed in CI. Adding the catalog entry itself is a separate PR to mpc-vst-plugins.
+- **Catalog:** `release.py` ran with `--repo sd88me/mpc-vst-profit5 --license GPL-3.0-or-later --id profit-5` and `catalog_check.py --catalog` passed in CI. Adding the catalog entry itself is a separate PR to mpc-vst-plugins.
 
 ## 5. Commands
 ```
