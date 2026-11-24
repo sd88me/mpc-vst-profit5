@@ -311,10 +311,10 @@ class Tab:
         # screws
         for sx in (S(13), W - S(13)):
             sy = H // 2
-            sr = S(7)
+            sr = S(5.5)
             d.ellipse((sx - sr, sy - sr, sx + sr, sy + sr), fill=(150, 152, 158, 255), outline=(60, 62, 66, 255), width=S(1))
             d.ellipse((sx - sr + S(1), sy - sr + S(1), sx + sr - S(2), sy + sr - S(2)), outline=(232, 234, 238, 255), width=S(1))
-            d.line((sx - S(4.5), sy + S(1.5), sx + S(4.5), sy - S(1.5)), fill=(40, 40, 44, 255), width=S(1.6))
+            d.line((sx - S(3.4), sy + S(1.2), sx + S(3.4), sy - S(1.2)), fill=(40, 40, 44, 255), width=S(1.6))
         # engraved lettering: dark ink, a light lip below-right and a shadow above-left
         try:
             f = ImageFont.truetype(PLAQUE_FONT, S(45 * w / 250 * 0.76))
