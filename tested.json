@@ -7,4 +7,6 @@
   { "version": "2.0.0", "device": "Akai Force (Gen1)", "firmware": "3.9.1", "date": "2026-11-13",
     "note": "Release zip (armv7) installed with its install.sh; loads, screen, sound and favourites checked." },
   { "version": "3.0.0", "device": "Akai MPC Live III (Gen2)", "firmware": "3.10", "date": "2026-11-24",
-    "note": "BANKS page, Rev 2 / Rev 4 circuit models (high quality default on Gen2), upload rules; installed and listened to on the unit. Not yet run on a Force / Gen1 (Eco default)." } ]
+    "note": "BANKS page, Rev 2 / Rev 4 circuit models (high quality default on Gen2), upload rules; installed and listened to on the unit. Not yet run on a Force / Gen1 (Eco default)." },
+  { "version": "3.0.1", "device": "Akai MPC Live III (Gen2)", "firmware": "3.10", "date": "2026-11-24",
+    "note": "MOD WHEEL widget and Q-Link, nameplate; installed from the release zip and looked at on the unit. Not yet run on a Force / Gen1 (Eco default)." } ]

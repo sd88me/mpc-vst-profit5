@@ -206,8 +206,9 @@ static const PSpec g_pspecs[] = {
     {"patch_slot_43", "Program Tile 43", 0.0f, 1.0f, 0.0f, 16899, nullptr, 0, -1, 0.0f},
     {"patch_slot_44", "Program Tile 44", 0.0f, 1.0f, 0.0f, 16899, nullptr, 0, -1, 0.0f},
     {"patch_slot_45", "Program Tile 45", 0.0f, 1.0f, 0.0f, 16899, nullptr, 0, -1, 0.0f},
+    {"mod_wheel", "Mod Wheel", 0.0f, 1.0f, 0.0f, 5120, nullptr, 0, -1, 0.0f},
 };
-static const int kNumParams = 176;
+static const int kNumParams = 177;
 static const int kFavAdd = 64, kFavDel = 65, kFavSlots = 32;
 static const int kFavName = 66, kKbOpen = 67, kKbFirst = 68, kKbCount = 42;
 static const char kKbChars[] = "1234567890QWERTYUIOPASDFGHJKLZXCVBNM-";   // the character keys, in order from kKbFirst (then space, delete, shift, cancel, save)

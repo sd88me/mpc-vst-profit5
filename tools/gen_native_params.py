@@ -29,8 +29,9 @@ BANKS = [("browse_bank_index", "Bank", "named"), ("prev_browse_bank", "Bank -", 
          ("random_patch", "Random", "momentary")] + \
         [("bank_slot_%d" % (i + 1), "Bank Tile %d" % (i + 1), "tile") for i in range(BANK_TILES)] + \
         [("patch_slot_%d" % (i + 1), "Program Tile %d" % (i + 1), "tile") for i in range(PROG_TILES)]
+EXTRA = [("mod_wheel", "Mod Wheel")]   # 3.0.1: the mod wheel as a control (engine key, 0..1; the engine uses the larger of it and MIDI CC1)
 FAV_SLOTS = 32
-if keys + [k for k, _ in APPENDED] + [k for k, _, _ in BANKS] != LOCK:
+if keys + [k for k, _ in APPENDED] + [k for k, _, _ in BANKS] + [k for k, _ in EXTRA] != LOCK:
     raise SystemExit("vst/params.json no longer matches vst/params.lock: the order is frozen (append only)")
 idx = {k: i for i, k in enumerate(keys)}
 
@@ -87,8 +88,10 @@ for k, n, kind in BANKS:   # engine keys (not kLocal)
               "text": (FL["kText"] | FL["kNoAuto"], 1023),
               "tile": (FL["kMomentary"] | FL["kText"] | FL["kTile"] | FL["kNoAuto"], 1)}[kind]
     rows.append("    {%s, %s, 0.0f, %s, 0.0f, %d, nullptr, 0, -1, 0.0f}," % (json.dumps(k), json.dumps(n), F(hi), fl))
+for k, n in EXTRA:   # engine keys, automatable floats
+    rows.append("    {%s, %s, 0.0f, 1.0f, 0.0f, %d, nullptr, 0, -1, 0.0f}," % (json.dumps(k), json.dumps(n), FL["kPolled"] | FL["kFloat"]))
 out += ["", "static const PSpec g_pspecs[] = {"] + rows + ["};",
-        "static const int kNumParams = %d;" % (len(P) + len(APPENDED) + len(BANKS)),
+        "static const int kNumParams = %d;" % (len(P) + len(APPENDED) + len(BANKS) + len(EXTRA)),
         "static const int kFavAdd = %d, kFavDel = %d, kFavSlots = %d;" % (len(P), len(P) + 1, FAV_SLOTS),
         "static const int kFavName = %d, kKbOpen = %d, kKbFirst = %d, kKbCount = %d;" % (len(P) + 2, len(P) + 3, len(P) + 4, len(KB_KEYS)),
         "static const char kKbChars[] = %s;   // the character keys, in order from kKbFirst (then space, delete, shift, cancel, save)" % json.dumps(KB_CHARS),
@@ -97,4 +100,4 @@ out += ["", "static const PSpec g_pspecs[] = {"] + rows + ["};",
         "static const int kPresetParam = %d;" % idx["preset"],
         "static const int kPresetSlots = %d;     // programs in the PRESET menu (src/plugin.c P5_SLOTS)" % (P[idx["preset"]]["max"] + 1), ""]
 open(os.path.join(ROOT, "src", "params_gen.h"), "w").write("\n".join(out))
-print("src/params_gen.h: %d params, %d programs + %d favourites" % (len(P) + len(APPENDED) + len(BANKS), P[idx["preset"]]["max"] + 1, FAV_SLOTS))
+print("src/params_gen.h: %d params, %d programs + %d favourites" % (len(P) + len(APPENDED) + len(BANKS) + len(EXTRA), P[idx["preset"]]["max"] + 1, FAV_SLOTS))

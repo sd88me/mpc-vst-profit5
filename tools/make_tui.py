@@ -237,7 +237,7 @@ QLINKS = {
         ("OSC KNOBS", [["pm_fenv", "pm_oscb", "a_freq", "a_pw"], ["lfo_init", "lfo_freq", "b_freq", "b_fine"], ["b_pw"], ["wm_mix", "mix_a", "mix_b", "mix_noise"]]),
         ("OSC SWITCHES", [["pm_freq_a", "pm_pw_a", "pm_filter"], ["a_saw", "a_pulse", "a_sync"], ["lfo_saw", "lfo_tri", "lfo_square"],
                           ["b_saw", "b_tri", "b_pulse"]]),
-        ("MOD SWITCHES", [["b_lo", "b_kbd"], ["wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b"], ["wm_filter"]]),
+        ("MOD SWITCHES", [["b_lo", "b_kbd"], ["wm_freq_a", "wm_freq_b", "wm_pw_a", "wm_pw_b"], ["wm_filter"], ["mod_wheel"]]),
     ],
     "FILTER AMP": [
         ("FILTER AMP", [["glide", "voices", "unison"], ["cutoff", "reso", "env_amt"], ["f_attack", "f_decay", "f_sustain", "f_release"],
@@ -277,6 +277,16 @@ def build_page(name, fn, spec):
             r = int(a["r"])
             p.add(key, (cx - r - 34, cy - r - 30, cx + r + 34, cy + r + 34),
                   entry(key, knob_def(strip, size), {"version": 1, "handleName": "Data"}, B(cx - size // 2, cy - size // 2, size, size), P(key), focus="Yes"))
+        elif kind == "wheel":   # the MOD wheel: a vertical film strip, dragged up (forward) / down
+            w, h, n = int(a["w"]), int(a["h"]), int(a["frames"])
+            strip = copy_art(os.path.basename(a["strip"]))
+            dk = "wheel_%dx%d" % (w, h)
+            if dk not in DEFS:
+                DEFS[dk] = component([focus_ring(B(-6, -6, w + 12, h + 12)),
+                                      entry("strip", "Knob", {"version": 3, "knobType": "FilmStrip", "filmStrip": strip, "numFrames": n, "invert": False,
+                                                              "dragOrientation": "Vertical", "handleName": "Data"}, B(0, 0, w, h))], actions=QL)
+            p.add(key, (cx - w // 2 - 8, cy - h // 2 - 8, cx + w // 2 + 8, cy + h // 2 + 34),
+                  entry(key, dk, {"version": 1, "handleName": "Data"}, B(cx - w // 2, cy - h // 2, w, h), P(key), focus="Yes"))
         elif kind == "toggle":
             on, off = copy_art(os.path.basename(a["img_on"])), copy_art(os.path.basename(a["img"]))
             w, h = int(a["w"]), int(a["h"])
@@ -517,6 +527,9 @@ def render_preview(p, bgname, rects_by_sub):
                 strip = Image.open(os.path.join(OUT, DEFS[typ]["componentsData"][1]["componentData"]["data"]["filmStrip"])).convert("RGBA")
                 f = int(round(frac * (FRAMES - 1)))
                 img.alpha_composite(strip.crop((0, f * w, w, f * w + w)), (x, y))
+            elif typ.startswith("wheel_"):   # the MOD wheel at its rest frame
+                strip = Image.open(os.path.join(OUT, DEFS[typ]["componentsData"][1]["componentData"]["data"]["filmStrip"])).convert("RGBA")
+                img.alpha_composite(strip.crop((0, 0, w, h)), (x, y))
             elif typ == "Button":
                 opts = spec.get("options")
                 lit = bool(opts) and opts.index(spec["default"]) == 1

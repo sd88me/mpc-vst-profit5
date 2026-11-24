@@ -12,6 +12,10 @@ smooth controls, velocity and aftertouch).
 |---|---|
 | ![Filter and amplifier](docs/img/screenshot-filter.png) | ![Banks: every bank and program](docs/img/skin-banks.png) |
 
+## New in 3.0.1
+
+- **MOD WHEEL on screen:** a wheel under the oscillators (drag it up and down) and a Q-Link on the MOD SWITCHES page. It drives the same wheel-mod depth as MIDI CC1, the larger of the two wins; it isn't saved with the sound.
+
 ## New in 3.0
 - **Circuit-modelled voice.** The Rev 2 voice was rebuilt from its schematics and service manual, following the
   [Lemus](https://github.com/lemus-dev/lemus) method: each section transcribed, simulated in ngspice and checked against it, then trimmed to the
