@@ -12,5 +12,5 @@
   "description": "Five-voice analog polysynth modelled on a classic 1978 instrument (SSM revisions). Circuit-modelled voice. Imports Repro-5 .h2p and Rev 4 .syx banks from banks/; BANKS page for every program.",
   "author": "sd88me",
   "url": "https://github.com/sd88me/mpc-vst-profit5",
-  "license": "MIT"
+  "license": "GPL-3.0-or-later"
 }
