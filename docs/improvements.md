@@ -135,3 +135,10 @@ service 0 failed, model 0 304/304 identical, engine and host tests OK. CPU (x86,
 ## Declined
 - 2026-11-22: the Rev 2 LFO rate law as read (0.002-21 Hz, 0.83 Hz at 6.5): the owner keeps 2.0.0's law, which suits the factory sheets
   (written on Rev 1 units). The evidence is in `docs/CIRCUIT.md`.
+
+- **2026-11-24, Profit-08 filter A/B (offline; Profit-08 itself unchanged).** Profit-08's `ma_ota_lpf` against our CEM 3320 kernel (`ma_vcf3320`) in a scratch
+  copy of its engine (cutoff trimmed x1.0175 to ring in tune, resonance mapped to the same loop gain, Q compensation exponent 0.5), 228 four-pole programs
+  from three banks. No circuit data exists for the Prophet '08's filter (no schematic or service manual found; DSI's "Curtis" chip is not identified in
+  any source I could read), so this compares models, not instruments. Small signal: responses within about 1-2 dB up to RES 90 of 127, the 3320 peaks
+  4-5 dB higher above RES 105, and rings at half the level. Programs: median level -0.7 dB (73% within 3 dB), centroid median -3%; patches with a cutoff
+  under about 30 Hz and heavy filter audio-mod differ 10-20 dB (the kernel is not validated there). Listening pack: `~/profit08-ab` (not in the repo).
